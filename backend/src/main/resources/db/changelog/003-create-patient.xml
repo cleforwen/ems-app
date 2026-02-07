@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="003-create-patient" author="ems">
+        <!-- Patients -->
+        <createTable tableName="patients">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="hospital_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="mrn" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="first_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_of_birth" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="gender" type="VARCHAR(20)"/>
+            <column name="phone" type="VARCHAR(50)"/>
+            <column name="email" type="VARCHAR(255)"/>
+            <column name="address" type="VARCHAR(255)"/>
+            <column name="emergency_contact" type="VARCHAR(255)"/>
+            <column name="blood_type" type="VARCHAR(10)"/>
+            <column name="assigned_doctor_id" type="BIGINT"/>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="created_at" type="TIMESTAMP"/>
+            <column name="modified_by" type="VARCHAR(255)"/>
+            <column name="modified_at" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="patients" baseColumnNames="hospital_id"
+                                 referencedTableName="hospitals" referencedColumnNames="id"
+                                 constraintName="fk_patients_hospital"/>
+        <addForeignKeyConstraint baseTableName="patients" baseColumnNames="assigned_doctor_id"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_patients_doctor"/>
+
+        <!-- Vitals -->
+        <createTable tableName="vitals">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="patient_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="recorded_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="recorded_by" type="BIGINT"/>
+            <column name="temperature" type="DECIMAL(5,2)"/>
+            <column name="bp_systolic" type="INT"/>
+            <column name="bp_diastolic" type="INT"/>
+            <column name="heart_rate" type="INT"/>
+            <column name="respiratory_rate" type="INT"/>
+            <column name="oxygen_saturation" type="DECIMAL(5,2)"/>
+            <column name="weight" type="DECIMAL(6,2)"/>
+            <column name="height" type="DECIMAL(6,2)"/>
+            <column name="notes" type="TEXT"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="created_at" type="TIMESTAMP"/>
+            <column name="modified_by" type="VARCHAR(255)"/>
+            <column name="modified_at" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="vitals" baseColumnNames="patient_id"
+                                 referencedTableName="patients" referencedColumnNames="id"
+                                 constraintName="fk_vitals_patient"/>
+        <addForeignKeyConstraint baseTableName="vitals" baseColumnNames="recorded_by"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_vitals_user"/>
+
+        <!-- Allergies -->
+        <createTable tableName="allergies">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="patient_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="allergen" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reaction" type="VARCHAR(255)"/>
+            <column name="severity" type="VARCHAR(50)"/>
+            <column name="notes" type="TEXT"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="created_at" type="TIMESTAMP"/>
+            <column name="modified_by" type="VARCHAR(255)"/>
+            <column name="modified_at" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="allergies" baseColumnNames="patient_id"
+                                 referencedTableName="patients" referencedColumnNames="id"
+                                 constraintName="fk_allergies_patient"/>
+
+        <!-- Medications -->
+        <createTable tableName="medications">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="patient_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="dosage" type="VARCHAR(255)"/>
+            <column name="frequency" type="VARCHAR(255)"/>
+            <column name="start_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="end_date" type="DATE"/>
+            <column name="prescribed_by" type="BIGINT"/>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="TEXT"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="created_at" type="TIMESTAMP"/>
+            <column name="modified_by" type="VARCHAR(255)"/>
+            <column name="modified_at" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="medications" baseColumnNames="patient_id"
+                                 referencedTableName="patients" referencedColumnNames="id"
+                                 constraintName="fk_medications_patient"/>
+        <addForeignKeyConstraint baseTableName="medications" baseColumnNames="prescribed_by"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_medications_user"/>
+
+        <!-- Diagnoses -->
+        <createTable tableName="diagnoses">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="patient_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="icd_code" type="VARCHAR(50)"/>
+            <column name="description" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="diagnosed_at" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="diagnosed_by" type="BIGINT"/>
+            <column name="status" type="VARCHAR(50)"/>
+            <column name="notes" type="TEXT"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="created_at" type="TIMESTAMP"/>
+            <column name="modified_by" type="VARCHAR(255)"/>
+            <column name="modified_at" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="diagnoses" baseColumnNames="patient_id"
+                                 referencedTableName="patients" referencedColumnNames="id"
+                                 constraintName="fk_diagnoses_patient"/>
+        <addForeignKeyConstraint baseTableName="diagnoses" baseColumnNames="diagnosed_by"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_diagnoses_user"/>
+
+        <!-- Lab Results -->
+        <createTable tableName="lab_results">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="patient_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="test_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="test_code" type="VARCHAR(50)"/>
+            <column name="result" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="unit" type="VARCHAR(50)"/>
+            <column name="reference_range" type="VARCHAR(255)"/>
+            <column name="status" type="VARCHAR(50)"/>
+            <column name="performed_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ordered_by" type="BIGINT"/>
+            <column name="notes" type="TEXT"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="created_at" type="TIMESTAMP"/>
+            <column name="modified_by" type="VARCHAR(255)"/>
+            <column name="modified_at" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="lab_results" baseColumnNames="patient_id"
+                                 referencedTableName="patients" referencedColumnNames="id"
+                                 constraintName="fk_lab_results_patient"/>
+        <addForeignKeyConstraint baseTableName="lab_results" baseColumnNames="ordered_by"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_lab_results_user"/>
+
+    </changeSet>
+
+</databaseChangeLog>

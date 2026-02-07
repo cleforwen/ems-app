@@ -1,0 +1,9 @@
+.git
+.gradle
+.idea
+.vscode
+node_modules
+build
+dist
+target
+.DS_Store

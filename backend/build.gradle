@@ -1,0 +1,84 @@
+plugins {
+    id 'java'
+    id 'io.quarkus' version '3.8.2'
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+group = 'com.ems'
+version = '1.0.0-SNAPSHOT'
+
+java {
+    sourceCompatibility = '21'
+    targetCompatibility = '21'
+}
+
+dependencies {
+    // Quarkus BOM
+    implementation enforcedPlatform("io.quarkus.platform:quarkus-bom:3.8.2")
+    
+    // RESTEasy Reactive with Jackson
+    implementation 'io.quarkus:quarkus-resteasy-reactive-jackson'
+    
+    // Hibernate ORM with Panache
+    implementation 'io.quarkus:quarkus-hibernate-orm-panache'
+    
+    // PostgreSQL JDBC Driver
+    implementation 'io.quarkus:quarkus-jdbc-postgresql'
+    
+    // Liquibase for database migrations
+    implementation 'io.quarkus:quarkus-liquibase'
+    
+    // SmallRye JWT for authentication
+    implementation 'io.quarkus:quarkus-smallrye-jwt'
+    implementation 'io.quarkus:quarkus-smallrye-jwt-build'
+    
+    // Bean Validation
+    implementation 'io.quarkus:quarkus-hibernate-validator'
+    
+    // Security
+    implementation 'io.quarkus:quarkus-security'
+    
+    // Arc (CDI)
+    implementation 'io.quarkus:quarkus-arc'
+    
+    // Health checks
+    implementation 'io.quarkus:quarkus-smallrye-health'
+    
+    // OpenAPI / Swagger
+    implementation 'io.quarkus:quarkus-smallrye-openapi'
+    
+    // BCrypt for password hashing
+    implementation 'org.mindrot:jbcrypt:0.4'
+    
+    // Logging
+    implementation 'io.quarkus:quarkus-logging-json'
+
+    // Mailer
+    implementation 'io.quarkus:quarkus-mailer'
+    
+    // Quinoa (UI Bundling)
+    implementation 'io.quarkiverse.quinoa:quarkus-quinoa:2.3.1'
+    
+    // Testing
+    testImplementation 'io.quarkus:quarkus-junit5'
+    testImplementation 'io.rest-assured:rest-assured'
+    testImplementation 'io.quarkus:quarkus-test-security-jwt'
+}
+
+test {
+    systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
+    useJUnitPlatform()
+}
+
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-parameters'
+}
+
+compileTestJava {
+    options.encoding = 'UTF-8'
+}
