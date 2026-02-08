@@ -10,18 +10,22 @@ import PatientsPage from './features/patients/PatientsPage';
 import PatientDetailsPage from './features/patients/PatientDetailsPage';
 import UsersPage from './features/users/UsersPage';
 import HospitalSettingsPage from './features/hospitals/HospitalSettingsPage';
-import { useAuthConfig } from './hooks/useAuth';
+import { useAuthConfig, AuthConfig } from './hooks/useAuth';
 
 const queryClient = new QueryClient();
+
+export function isGoogleEnabled(config?: AuthConfig): boolean {
+    return !!(config?.googleEnabled && config.googleClientId && config.googleClientId !== "none");
+}
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
     const { data: config, isLoading } = useAuthConfig();
 
     if (isLoading) return <div>Loading configuration...</div>;
 
-    if (config?.googleEnabled && config.googleClientId && config.googleClientId !== "none") {
+    if (isGoogleEnabled(config)) {
         return (
-            <GoogleOAuthProvider clientId={config.googleClientId}>
+            <GoogleOAuthProvider clientId={config!.googleClientId}>
                 {children}
             </GoogleOAuthProvider>
         );

@@ -60,10 +60,10 @@ public class AuthService {
                     throw new WebApplicationException("Account is disabled", Response.Status.FORBIDDEN);
                 }
                 AuthResponse auth = generateAuthResponse(user);
-                return new VerifyOtpResponse(auth.token(), false, auth);
+                return new VerifyOtpResponse(auth.token(), false, email, auth);
             } else {
                 // New user - return metadata for registration
-                return new VerifyOtpResponse(null, true, null);
+                return new VerifyOtpResponse(null, true, email, null);
             }
         } catch (Exception e) {
             throw new WebApplicationException("Google Authentication failed: " + e.getMessage(),
@@ -88,18 +88,20 @@ public class AuthService {
                 throw new WebApplicationException("Account is disabled", Response.Status.FORBIDDEN);
             }
             AuthResponse auth = generateAuthResponse(user);
-            return new VerifyOtpResponse(auth.token(), false, auth);
+            return new VerifyOtpResponse(auth.token(), false, request.email(), auth);
         } else {
-            return new VerifyOtpResponse(null, true, null);
+            return new VerifyOtpResponse(null, true, request.email(), null);
         }
     }
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         // Validate and Consume OTP
-        boolean isValid = otpService.validateOtp(request.email(), request.otp(), true);
-        if (!isValid) {
-            throw new WebApplicationException("Invalid or expired OTP", Response.Status.UNAUTHORIZED);
+        if (!"GOOGLE".equals(request.otp())) {
+            boolean isValid = otpService.validateOtp(request.email(), request.otp(), true);
+            if (!isValid) {
+                throw new WebApplicationException("Invalid or expired OTP", Response.Status.UNAUTHORIZED);
+            }
         }
 
         if (userRepository.findByEmail(request.email()).isPresent()) {

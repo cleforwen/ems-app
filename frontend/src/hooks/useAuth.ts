@@ -14,12 +14,12 @@ export const SendOtpSchema = z.object({
 
 export const VerifyOtpSchema = z.object({
     email: z.string().email('Invalid email address'),
-    otp: z.string().length(6, 'OTP must be 6 digits'),
+    otp: z.string().min(1, 'OTP is required'),
 });
 
 export const RegisterSchema = z.object({
     email: z.string().email('Invalid email address'),
-    otp: z.string().length(6, 'OTP must be 6 digits'),
+    otp: z.string().min(1, 'OTP is required'),
     hospitalName: z.string().min(3, 'Hospital name must be at least 3 characters'),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
@@ -42,6 +42,7 @@ export interface AuthResponse {
 export interface VerifyOtpResponse {
     token?: string;
     isNewUser: boolean;
+    email: string;
     auth?: AuthResponse;
 }
 

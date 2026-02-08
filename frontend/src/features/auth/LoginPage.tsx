@@ -13,6 +13,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { isGoogleEnabled } from '../../App';
 
 type Step = 'EMAIL' | 'OTP' | 'REGISTER';
 
@@ -114,7 +115,7 @@ export default function LoginPage() {
                                 {isSendingOtp ? 'Sending...' : 'Continue with email'}
                             </Button>
 
-                            {authConfig?.googleEnabled && (
+                            {isGoogleEnabled(authConfig) && (
                                 <>
                                     <div className="relative py-2">
                                         <div className="absolute inset-0 flex items-center">
@@ -133,8 +134,10 @@ export default function LoginPage() {
                                                             if (res.isNewUser) {
                                                                 toast({ title: "Welcome!", description: "Please complete your hospital registration." });
                                                                 setStep('REGISTER');
-                                                                // Extract email if possible or just let them fill it (simplified for now)
-                                                                registerForm.setValue('otp', 'GOOGLE'); // Sentinel for backend maybe? Or just skip OTP
+                                                                // Use the verified email returned from the backend
+                                                                registerForm.setValue('email', res.email);
+                                                                registerForm.setValue('otp', 'GOOGLE');
+                                                                // Sentinel for backend maybe? Or just skip OTP
                                                             } else if (res.auth) {
                                                                 toast({ title: "Success", description: "Logged in successfully" });
                                                                 navigate(`/hospital/${res.auth.hospitalId}/dashboard`);
