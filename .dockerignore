@@ -7,3 +7,4 @@ build
 dist
 target
 .DS_Store
+backend/gradle.properties
