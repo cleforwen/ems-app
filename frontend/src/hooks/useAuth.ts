@@ -1,8 +1,13 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { z } from 'zod';
 
 // Types
+export interface AuthConfig {
+    googleEnabled: boolean;
+    googleClientId: string;
+}
+
 export const SendOtpSchema = z.object({
     email: z.string().email('Invalid email address'),
 });
@@ -55,10 +60,42 @@ const registerHospital = async (data: RegisterRequest): Promise<AuthResponse> =>
     return response.data;
 };
 
+const googleLogin = async (idToken: string): Promise<VerifyOtpResponse> => {
+    const response = await api.post<VerifyOtpResponse>('/auth/google', { idToken });
+    return response.data;
+};
+
+const getAuthConfig = async (): Promise<AuthConfig> => {
+    const response = await api.get<AuthConfig>('/auth/config');
+    return response.data;
+};
+
 // Hooks
+export const useAuthConfig = () => {
+    return useQuery({
+        queryKey: ['authConfig'],
+        queryFn: getAuthConfig,
+        staleTime: Infinity, // Config doesn't change during session
+    });
+};
+
 export const useSendOtp = () => {
     return useMutation({
         mutationFn: sendOtp,
+    });
+};
+
+export const useGoogleLogin = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: googleLogin,
+        onSuccess: (data) => {
+            if (data.token && data.auth) {
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.auth));
+                queryClient.setQueryData(['currentUser'], data.auth);
+            }
+        },
     });
 };
 

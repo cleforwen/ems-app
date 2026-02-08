@@ -1,13 +1,12 @@
 package com.ems.auth;
 
+import com.ems.common.email.EmailService;
 import com.ems.auth.dto.*;
 import com.ems.hospital.Hospital;
 import com.ems.hospital.HospitalRepository;
 import com.ems.user.Role;
 import com.ems.user.User;
 import com.ems.user.repository.UserRepository;
-import io.quarkus.mailer.Mail;
-import io.quarkus.mailer.Mailer;
 import io.smallrye.jwt.build.Jwt;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -17,7 +16,6 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.util.Set;
-import java.util.Random;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
@@ -33,7 +31,10 @@ public class AuthService {
     OtpService otpService;
 
     @Inject
-    Mailer mailer;
+    EmailService emailService;
+
+    @Inject
+    GoogleAuthService googleAuthService;
 
     @ConfigProperty(name = "mp.jwt.verify.issuer")
     String issuer;
@@ -41,10 +42,33 @@ public class AuthService {
     public void requestOtp(OtpRequest request) {
         String otp = otpService.generateOtp(request.email());
 
-        // Send email via MailHog
-        mailer.send(Mail.withText(request.email(), "Your OTP Code", "Your OTP code is: " + otp));
+        // Send email (SMTP or API depending on profile)
+        emailService.sendText(request.email(), "Your OTP Code", "Your OTP code is: " + otp);
 
         System.out.println("OTP for " + request.email() + ": " + otp); // For dev/demo purposes
+    }
+
+    public VerifyOtpResponse verifyGoogleLogin(String idToken) {
+        try {
+            var payload = googleAuthService.verifyToken(idToken);
+            String email = payload.getEmail();
+
+            var userOptional = userRepository.findByEmail(email);
+            if (userOptional.isPresent()) {
+                User user = userOptional.get();
+                if (!user.getActive()) {
+                    throw new WebApplicationException("Account is disabled", Response.Status.FORBIDDEN);
+                }
+                AuthResponse auth = generateAuthResponse(user);
+                return new VerifyOtpResponse(auth.token(), false, auth);
+            } else {
+                // New user - return metadata for registration
+                return new VerifyOtpResponse(null, true, null);
+            }
+        } catch (Exception e) {
+            throw new WebApplicationException("Google Authentication failed: " + e.getMessage(),
+                    Response.Status.UNAUTHORIZED);
+        }
     }
 
     public VerifyOtpResponse verifyOtp(VerifyOtpRequest request) {

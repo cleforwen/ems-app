@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
-    useSendOtp, useVerifyOtp, useRegister,
+    useSendOtp, useVerifyOtp, useRegister, useGoogleLogin, useAuthConfig,
     SendOtpSchema, VerifyOtpSchema, RegisterSchema,
     SendOtpRequest, VerifyOtpRequest, RegisterRequest
 } from '../../hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { GoogleLogin } from '@react-oauth/google';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -22,6 +23,8 @@ export default function LoginPage() {
     const { mutate: sendOtp, isPending: isSendingOtp } = useSendOtp();
     const { mutate: verifyOtp, isPending: isVerifyingOtp } = useVerifyOtp();
     const { mutate: register, isPending: isRegistering } = useRegister();
+    const { mutate: googleLogin, isPending: isGoogleLoggingIn } = useGoogleLogin();
+    const { data: authConfig } = useAuthConfig();
 
     const { toast } = useToast();
     const navigate = useNavigate();
@@ -106,10 +109,51 @@ export default function LoginPage() {
                             <Button
                                 className="w-full"
                                 onClick={emailForm.handleSubmit(onSendOtp)}
-                                disabled={isSendingOtp}
+                                disabled={isSendingOtp || isGoogleLoggingIn}
                             >
                                 {isSendingOtp ? 'Sending...' : 'Continue with email'}
                             </Button>
+
+                            {authConfig?.googleEnabled && (
+                                <>
+                                    <div className="relative py-2">
+                                        <div className="absolute inset-0 flex items-center">
+                                            <span className="w-full border-t" />
+                                        </div>
+                                        <div className="relative flex justify-center text-xs uppercase">
+                                            <span className="bg-white px-2 text-muted-foreground">Or continue with</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-center">
+                                        <GoogleLogin
+                                            onSuccess={credentialResponse => {
+                                                if (credentialResponse.credential) {
+                                                    googleLogin(credentialResponse.credential, {
+                                                        onSuccess: (res) => {
+                                                            if (res.isNewUser) {
+                                                                toast({ title: "Welcome!", description: "Please complete your hospital registration." });
+                                                                setStep('REGISTER');
+                                                                // Extract email if possible or just let them fill it (simplified for now)
+                                                                registerForm.setValue('otp', 'GOOGLE'); // Sentinel for backend maybe? Or just skip OTP
+                                                            } else if (res.auth) {
+                                                                toast({ title: "Success", description: "Logged in successfully" });
+                                                                navigate(`/hospital/${res.auth.hospitalId}/dashboard`);
+                                                            }
+                                                        },
+                                                        onError: (err: any) => {
+                                                            toast({ variant: "destructive", title: "Google Login Failed", description: err.response?.data?.error || "Authentication error" });
+                                                        }
+                                                    });
+                                                }
+                                            }}
+                                            onError={() => {
+                                                toast({ variant: "destructive", title: "Login Failed", description: "Google login was unsuccessful" });
+                                            }}
+                                            useOneTap
+                                        />
+                                    </div>
+                                </>
+                            )}
                         </div>
                     )}
 
