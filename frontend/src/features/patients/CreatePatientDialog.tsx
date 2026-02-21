@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/dialog';
 
 const schema = z.object({
-    mrn: z.string().min(1, 'MRN is required'),
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
     dateOfBirth: z.string().min(1, 'Date of birth is required'),
@@ -70,12 +69,6 @@ export function CreatePatientDialog({ open, onOpenChange }: CreatePatientDialogP
                 </DialogHeader>
                 <form onSubmit={handleSubmit(onSubmit)}>
                     <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="mrn" className="text-right">MRN</Label>
-                            <Input id="mrn" className="col-span-3" {...register('mrn')} />
-                        </div>
-                        {errors.mrn && <p className="text-xs text-red-500 text-right">{errors.mrn.message}</p>}
-
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="firstName" className="text-right">First Name</Label>
                             <Input id="firstName" className="col-span-3" {...register('firstName')} />

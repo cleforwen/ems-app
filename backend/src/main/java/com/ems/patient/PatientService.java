@@ -45,15 +45,14 @@ public class PatientService {
     public PatientResponse create(CreatePatientRequest request) {
         Long hospitalId = getHospitalId();
 
-        if (patientRepository.findByMrnAndHospital(request.mrn(), hospitalId).isPresent()) {
-            throw new WebApplicationException("MRN already exists in this hospital", Response.Status.CONFLICT);
-        }
+        String generatedMrn = "MRN-"
+                + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 24).toUpperCase();
 
         Hospital hospital = hospitalRepository.findById(hospitalId);
 
         Patient patient = new Patient();
         patient.setHospital(hospital);
-        patient.setMrn(request.mrn());
+        patient.setMrn(generatedMrn);
         patient.setFirstName(request.firstName());
         patient.setLastName(request.lastName());
         patient.setDateOfBirth(request.dateOfBirth());
