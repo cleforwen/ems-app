@@ -19,7 +19,7 @@ public class Diagnosis extends BaseEntity {
     @Column(nullable = false)
     private String description;
 
-    @Column(nullable = false)
+    @Column(name = "diagnosed_at", nullable = false)
     private LocalDate diagnosedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)

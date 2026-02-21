@@ -25,6 +25,9 @@ public class Hospital extends BaseEntity {
     @Column(nullable = false)
     private Boolean active = true;
 
+    @Column(name = "appointments_enabled", nullable = false)
+    private Boolean appointmentsEnabled = true;
+
     // Getters and Setters
     public String getName() {
         return name;
@@ -104,5 +107,13 @@ public class Hospital extends BaseEntity {
 
     public void setActive(Boolean active) {
         this.active = active;
+    }
+
+    public Boolean getAppointmentsEnabled() {
+        return appointmentsEnabled;
+    }
+
+    public void setAppointmentsEnabled(Boolean appointmentsEnabled) {
+        this.appointmentsEnabled = appointmentsEnabled;
     }
 }

@@ -10,6 +10,7 @@ import PatientsPage from './features/patients/PatientsPage';
 import PatientDetailsPage from './features/patients/PatientDetailsPage';
 import UsersPage from './features/users/UsersPage';
 import HospitalSettingsPage from './features/hospitals/HospitalSettingsPage';
+import AppointmentsPage from './features/appointments/AppointmentsPage';
 import { useAuthConfig, AuthConfig } from './hooks/useAuth';
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ function App() {
                             <Route path="dashboard" element={<DashboardPage />} />
                             <Route path="patients" element={<PatientsPage />} />
                             <Route path="patients/:id" element={<PatientDetailsPage />} />
+                            <Route path="appointments" element={<AppointmentsPage />} />
                             <Route path="users" element={<UsersPage />} />
                             <Route path="settings" element={<HospitalSettingsPage />} />
                         </Route>

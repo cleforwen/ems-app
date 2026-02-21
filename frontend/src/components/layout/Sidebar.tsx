@@ -1,10 +1,12 @@
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { cn } from '@/utils';
-import { LayoutDashboard, Users, UserCog, Building2 } from 'lucide-react';
+import { useHospital } from '@/hooks/useHospitals';
+import { LayoutDashboard, Users, UserCog, Building2, CalendarDays } from 'lucide-react';
 
 const navigation = [
     { name: 'Dashboard', href: 'dashboard', icon: LayoutDashboard },
     { name: 'Patients', href: 'patients', icon: Users },
+    { name: 'Appointments', href: 'appointments', icon: CalendarDays },
     { name: 'Staff', href: 'users', icon: UserCog, adminOnly: true },
     { name: 'Hospital', href: 'settings', icon: Building2, adminOnly: true },
 ];
@@ -12,6 +14,7 @@ const navigation = [
 export function Sidebar() {
     const location = useLocation();
     const { hospitalId } = useParams();
+    const { data: hospital } = useHospital();
     const isAdmin = true; // TODO: Get from auth context
 
     return (
@@ -23,6 +26,7 @@ export function Sidebar() {
             <nav className="flex-1 space-y-1 p-4">
                 {navigation.map((item) => {
                     if (item.adminOnly && !isAdmin) return null;
+                    if (item.name === 'Appointments' && hospital?.appointmentsEnabled === false) return null;
 
                     const Icon = item.icon;
                     // Check if current path includes the item href

@@ -14,7 +14,7 @@ public class Vital extends BaseEntity {
     @JoinColumn(name = "patient_id", nullable = false)
     private Patient patient;
 
-    @Column(nullable = false)
+    @Column(name = "recorded_at", nullable = false)
     private LocalDateTime recordedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -29,8 +29,13 @@ public class Vital extends BaseEntity {
     @Column(name = "bp_diastolic")
     private Integer bloodPressureDiastolic;
 
+    @Column(name = "heart_rate")
     private Integer heartRate;
+
+    @Column(name = "respiratory_rate")
     private Integer respiratoryRate;
+
+    @Column(name = "oxygen_saturation")
     private BigDecimal oxygenSaturation;
     private BigDecimal weight;
     private BigDecimal height;

@@ -13,6 +13,7 @@ export interface Hospital {
     email: string;
     website: string;
     active: boolean;
+    appointmentsEnabled: boolean;
 }
 
 export interface UpdateHospitalRequest {
@@ -24,6 +25,7 @@ export interface UpdateHospitalRequest {
     phone?: string;
     email?: string;
     website?: string;
+    appointmentsEnabled?: boolean;
 }
 
 const getCurrentHospitalId = (): number | null => {

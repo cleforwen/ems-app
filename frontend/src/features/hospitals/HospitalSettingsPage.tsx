@@ -4,6 +4,7 @@ import { useHospital, useUpdateHospital, UpdateHospitalRequest } from '../../hoo
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -12,7 +13,10 @@ export default function HospitalSettingsPage() {
     const { mutate: updateHospital, isPending } = useUpdateHospital();
     const { toast } = useToast();
 
-    const { register, handleSubmit, reset, formState: { errors } } = useForm<UpdateHospitalRequest>();
+    const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<UpdateHospitalRequest>();
+
+    // Watch appointmentsEnabled to bind to switch value
+    const appointmentsEnabled = watch('appointmentsEnabled');
 
     useEffect(() => {
         if (hospital) {
@@ -96,6 +100,19 @@ export default function HospitalSettingsPage() {
                         <div className="space-y-2">
                             <Label htmlFor="website">Website</Label>
                             <Input id="website" {...register('website')} />
+                        </div>
+
+                        <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                                <Label className="text-base">Enable Appointments</Label>
+                                <p className="text-sm text-muted-foreground">
+                                    Turn on the appointments and scheduling feature for the hospital.
+                                </p>
+                            </div>
+                            <Switch
+                                checked={appointmentsEnabled ?? true}
+                                onCheckedChange={(val) => setValue('appointmentsEnabled', val, { shouldDirty: true })}
+                            />
                         </div>
                     </CardContent>
                     <CardFooter>

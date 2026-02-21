@@ -70,6 +70,8 @@ public class HospitalService {
             hospital.setWebsite(request.website());
         if (request.active() != null)
             hospital.setActive(request.active());
+        if (request.appointmentsEnabled() != null)
+            hospital.setAppointmentsEnabled(request.appointmentsEnabled());
         hospital.setModifiedBy(getCurrentUser());
 
         return toResponse(hospital);
@@ -78,7 +80,7 @@ public class HospitalService {
     private HospitalResponse toResponse(Hospital h) {
         return new HospitalResponse(
                 h.getId(), h.getName(), h.getCode(), h.getAddress(), h.getCity(), h.getState(), h.getZip(),
-                h.getPhone(), h.getEmail(), h.getWebsite(), h.getActive());
+                h.getPhone(), h.getEmail(), h.getWebsite(), h.getActive(), h.getAppointmentsEnabled());
     }
 
     private String getCurrentUser() {
