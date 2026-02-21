@@ -70,8 +70,9 @@ public class AuthService {
                         .collect(Collectors.toList());
                 return new VerifyOtpResponse(globalToken, false, email, hospitals);
             } else {
-                // New user - return metadata for registration
-                return new VerifyOtpResponse(null, true, email, null);
+                // New user - return global token + metadata for registration
+                String globalToken = generateGlobalToken(email);
+                return new VerifyOtpResponse(globalToken, true, email, null);
             }
         } catch (Exception e) {
             throw new WebApplicationException("Google Authentication failed: " + e.getMessage(),

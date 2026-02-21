@@ -56,12 +56,12 @@ export default function LoginPage() {
             onSuccess: (res) => {
                 if (res.globalToken) {
                     setGlobalToken(res.globalToken);
-                    registerForm.setValue('globalToken', res.globalToken);
                 }
                 if (res.isNewUser || !res.hospitals || res.hospitals.length === 0) {
                     toast({ title: "New User", description: "Please complete registration" });
-                    setStep('REGISTER');
                     registerForm.setValue('email', res.email);
+                    if (res.globalToken) registerForm.setValue('globalToken', res.globalToken);
+                    setStep('REGISTER');
                 } else {
                     setHospitals(res.hospitals);
                     setStep('SELECT_HOSPITAL');
@@ -151,12 +151,12 @@ export default function LoginPage() {
                                                         onSuccess: (res) => {
                                                             if (res.globalToken) {
                                                                 setGlobalToken(res.globalToken);
-                                                                registerForm.setValue('globalToken', res.globalToken);
                                                             }
                                                             if (res.isNewUser || !res.hospitals || res.hospitals.length === 0) {
                                                                 toast({ title: "Welcome!", description: "Please complete your hospital registration." });
-                                                                setStep('REGISTER');
                                                                 registerForm.setValue('email', res.email);
+                                                                if (res.globalToken) registerForm.setValue('globalToken', res.globalToken);
+                                                                setStep('REGISTER');
                                                             } else {
                                                                 setHospitals(res.hospitals);
                                                                 setStep('SELECT_HOSPITAL');
@@ -233,7 +233,11 @@ export default function LoginPage() {
                             <Button
                                 className="w-full"
                                 variant="secondary"
-                                onClick={() => setStep('REGISTER')}
+                                onClick={() => {
+                                    registerForm.setValue('email', emailForm.getValues('email') || otpForm.getValues('email'));
+                                    registerForm.setValue('globalToken', globalToken);
+                                    setStep('REGISTER');
+                                }}
                                 disabled={isSelectingHospital}
                             >
                                 + Create New Hospital
@@ -275,7 +279,10 @@ export default function LoginPage() {
                             </div>
                             <Button
                                 className="w-full"
-                                onClick={registerForm.handleSubmit(onRegister)}
+                                onClick={registerForm.handleSubmit(onRegister, (errors) => {
+                                    console.error('Register form validation errors:', errors);
+                                    toast({ variant: "destructive", title: "Validation Error", description: "Please fill in all required fields and try again." });
+                                })}
                                 disabled={isRegistering}
                             >
                                 {isRegistering ? 'Creating Workspace...' : 'Create & Login'}
