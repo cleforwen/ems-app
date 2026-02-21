@@ -19,7 +19,7 @@ export const VerifyOtpSchema = z.object({
 
 export const RegisterSchema = z.object({
     email: z.string().email('Invalid email address'),
-    otp: z.string().min(1, 'OTP is required'),
+    globalToken: z.string().min(1, 'Token is required'),
     hospitalName: z.string().min(3, 'Hospital name must be at least 3 characters'),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
@@ -39,11 +39,21 @@ export interface AuthResponse {
     roles: string[];
 }
 
+export interface HospitalInfo {
+    id: number;
+    name: string;
+    roles: string[];
+}
+
 export interface VerifyOtpResponse {
-    token?: string;
+    globalToken?: string;
     isNewUser: boolean;
     email: string;
-    auth?: AuthResponse;
+    hospitals?: HospitalInfo[];
+}
+
+export interface ExchangeTokenRequest {
+    hospitalId: number;
 }
 
 // API Functions
@@ -58,6 +68,18 @@ const verifyOtp = async (data: VerifyOtpRequest): Promise<VerifyOtpResponse> => 
 
 const registerHospital = async (data: RegisterRequest): Promise<AuthResponse> => {
     const response = await api.post<AuthResponse>('/auth/register', data);
+    return response.data;
+};
+
+const selectHospital = async (data: ExchangeTokenRequest, token: string): Promise<AuthResponse> => {
+    const response = await api.post<AuthResponse>('/auth/select-hospital', data, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+};
+
+const getMyHospitals = async (): Promise<HospitalInfo[]> => {
+    const response = await api.get<HospitalInfo[]>('/auth/me/hospitals');
     return response.data;
 };
 
@@ -87,30 +109,33 @@ export const useSendOtp = () => {
 };
 
 export const useGoogleLogin = () => {
-    const queryClient = useQueryClient();
     return useMutation({
         mutationFn: googleLogin,
-        onSuccess: (data) => {
-            if (data.token && data.auth) {
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify(data.auth));
-                queryClient.setQueryData(['currentUser'], data.auth);
-            }
-        },
     });
 };
 
 export const useVerifyOtp = () => {
-    const queryClient = useQueryClient();
     return useMutation({
         mutationFn: verifyOtp,
+    });
+};
+
+export const useSelectHospital = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ data, token }: { data: ExchangeTokenRequest, token: string }) => selectHospital(data, token),
         onSuccess: (data) => {
-            if (data.token && data.auth) {
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify(data.auth));
-                queryClient.setQueryData(['currentUser'], data.auth);
-            }
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data));
+            queryClient.setQueryData(['currentUser'], data);
         },
+    });
+};
+
+export const useMyHospitals = () => {
+    return useQuery({
+        queryKey: ['myHospitals'],
+        queryFn: getMyHospitals,
     });
 };
 

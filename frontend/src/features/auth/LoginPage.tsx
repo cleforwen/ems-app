@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
-    useSendOtp, useVerifyOtp, useRegister, useGoogleLogin, useAuthConfig,
-    SendOtpSchema, VerifyOtpSchema, RegisterSchema,
+    useSendOtp, useVerifyOtp, useRegister, useGoogleLogin, useAuthConfig, useSelectHospital,
+    SendOtpSchema, VerifyOtpSchema, RegisterSchema, HospitalInfo,
     SendOtpRequest, VerifyOtpRequest, RegisterRequest
 } from '../../hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -15,16 +15,19 @@ import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { isGoogleEnabled } from '../../App';
 
-type Step = 'EMAIL' | 'OTP' | 'REGISTER';
+type Step = 'EMAIL' | 'OTP' | 'SELECT_HOSPITAL' | 'REGISTER';
 
 export default function LoginPage() {
     const [step, setStep] = useState<Step>('EMAIL');
-    const [email, setEmail] = useState('');
+
+    const [globalToken, setGlobalToken] = useState<string>('');
+    const [hospitals, setHospitals] = useState<HospitalInfo[]>([]);
 
     const { mutate: sendOtp, isPending: isSendingOtp } = useSendOtp();
     const { mutate: verifyOtp, isPending: isVerifyingOtp } = useVerifyOtp();
     const { mutate: register, isPending: isRegistering } = useRegister();
     const { mutate: googleLogin, isPending: isGoogleLoggingIn } = useGoogleLogin();
+    const { mutate: selectHospital, isPending: isSelectingHospital } = useSelectHospital();
     const { data: authConfig } = useAuthConfig();
 
     const { toast } = useToast();
@@ -36,7 +39,6 @@ export default function LoginPage() {
     const registerForm = useForm<RegisterRequest>({ resolver: zodResolver(RegisterSchema) });
 
     const onSendOtp = (data: SendOtpRequest) => {
-        setEmail(data.email);
         sendOtp(data, {
             onSuccess: () => {
                 toast({ title: "OTP Sent", description: "Check your console (Dev Mode)" });
@@ -52,18 +54,33 @@ export default function LoginPage() {
     const onVerifyOtp = (data: VerifyOtpRequest) => {
         verifyOtp(data, {
             onSuccess: (res) => {
-                if (res.isNewUser) {
+                if (res.globalToken) {
+                    setGlobalToken(res.globalToken);
+                    registerForm.setValue('globalToken', res.globalToken);
+                }
+                if (res.isNewUser || !res.hospitals || res.hospitals.length === 0) {
                     toast({ title: "New User", description: "Please complete registration" });
                     setStep('REGISTER');
-                    registerForm.setValue('email', email);
-                    registerForm.setValue('otp', data.otp);
-                } else if (res.auth) {
-                    toast({ title: "Success", description: "Logged in successfully" });
-                    navigate(`/hospital/${res.auth.hospitalId}/dashboard`);
+                    registerForm.setValue('email', res.email);
+                } else {
+                    setHospitals(res.hospitals);
+                    setStep('SELECT_HOSPITAL');
                 }
             },
             onError: (err: any) => {
                 toast({ variant: "destructive", title: "Verify Failed", description: err.response?.data?.error || "Invalid OTP" });
+            }
+        });
+    };
+
+    const handleSelectHospital = (hospitalId: number) => {
+        selectHospital({ data: { hospitalId }, token: globalToken }, {
+            onSuccess: (res) => {
+                toast({ title: "Success", description: "Logged in successfully" });
+                navigate(`/hospital/${res.hospitalId}/dashboard`);
+            },
+            onError: (err: any) => {
+                toast({ variant: "destructive", title: "Error", description: err.response?.data?.error || "Failed to select hospital" });
             }
         });
     };
@@ -88,6 +105,7 @@ export default function LoginPage() {
                     <CardDescription>
                         {step === 'EMAIL' && "Enter your email to login or sign up"}
                         {step === 'OTP' && "Enter the OTP sent to your email"}
+                        {step === 'SELECT_HOSPITAL' && "Select your Hospital"}
                         {step === 'REGISTER' && "Setup your Hospital"}
                     </CardDescription>
                 </CardHeader>
@@ -131,16 +149,17 @@ export default function LoginPage() {
                                                 if (credentialResponse.credential) {
                                                     googleLogin(credentialResponse.credential, {
                                                         onSuccess: (res) => {
-                                                            if (res.isNewUser) {
+                                                            if (res.globalToken) {
+                                                                setGlobalToken(res.globalToken);
+                                                                registerForm.setValue('globalToken', res.globalToken);
+                                                            }
+                                                            if (res.isNewUser || !res.hospitals || res.hospitals.length === 0) {
                                                                 toast({ title: "Welcome!", description: "Please complete your hospital registration." });
                                                                 setStep('REGISTER');
-                                                                // Use the verified email returned from the backend
                                                                 registerForm.setValue('email', res.email);
-                                                                registerForm.setValue('otp', 'GOOGLE');
-                                                                // Sentinel for backend maybe? Or just skip OTP
-                                                            } else if (res.auth) {
-                                                                toast({ title: "Success", description: "Logged in successfully" });
-                                                                navigate(`/hospital/${res.auth.hospitalId}/dashboard`);
+                                                            } else {
+                                                                setHospitals(res.hospitals);
+                                                                setStep('SELECT_HOSPITAL');
                                                             }
                                                         },
                                                         onError: (err: any) => {
@@ -183,6 +202,42 @@ export default function LoginPage() {
                                 {isVerifyingOtp ? 'Verifying...' : 'Verify OTP'}
                             </Button>
                             <Button variant="ghost" className="w-full" onClick={() => setStep('EMAIL')}>Back to Email</Button>
+                        </div>
+                    )}
+
+                    {step === 'SELECT_HOSPITAL' && (
+                        <div className="space-y-4">
+                            <p className="text-sm text-muted-foreground mb-4">Select a hospital to login or create a new one.</p>
+                            <div className="space-y-3">
+                                {hospitals.map(h => (
+                                    <Button
+                                        key={h.id}
+                                        variant="outline"
+                                        className="w-full justify-start h-auto py-3 px-4 flex flex-col items-start gap-1"
+                                        onClick={() => handleSelectHospital(h.id)}
+                                        disabled={isSelectingHospital}
+                                    >
+                                        <span className="font-semibold">{h.name}</span>
+                                        <span className="text-xs text-muted-foreground font-normal">Roles: {h.roles.join(', ')}</span>
+                                    </Button>
+                                ))}
+                            </div>
+                            <div className="relative py-2">
+                                <div className="absolute inset-0 flex items-center">
+                                    <span className="w-full border-t" />
+                                </div>
+                                <div className="relative flex justify-center text-xs uppercase">
+                                    <span className="bg-white px-2 text-muted-foreground">Or</span>
+                                </div>
+                            </div>
+                            <Button
+                                className="w-full"
+                                variant="secondary"
+                                onClick={() => setStep('REGISTER')}
+                                disabled={isSelectingHospital}
+                            >
+                                + Create New Hospital
+                            </Button>
                         </div>
                     )}
 

@@ -4,12 +4,12 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
 public record RegisterRequest(
-        @NotBlank(message = "Email is required") @Email(message = "Invalid email format") String email,
+                @NotBlank(message = "Email is required") @Email(message = "Invalid email format") String email,
 
-        @NotBlank(message = "OTP is required") String otp,
+                @NotBlank(message = "Global token is required") String globalToken,
 
-        @NotBlank(message = "Hospital name is required") String hospitalName,
+                @NotBlank(message = "Hospital name is required") String hospitalName,
 
-        String firstName,
-        String lastName) {
+                String firstName,
+                String lastName) {
 }

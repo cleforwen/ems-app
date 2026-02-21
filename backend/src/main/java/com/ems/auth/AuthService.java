@@ -15,8 +15,11 @@ import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import io.smallrye.jwt.auth.principal.JWTParser;
+import io.smallrye.jwt.auth.principal.ParseException;
 
 @ApplicationScoped
 public class AuthService {
@@ -39,6 +42,9 @@ public class AuthService {
     @ConfigProperty(name = "mp.jwt.verify.issuer")
     String issuer;
 
+    @Inject
+    JWTParser jwtParser;
+
     public void requestOtp(OtpRequest request) {
         String otp = otpService.generateOtp(request.email());
 
@@ -53,14 +59,16 @@ public class AuthService {
             var payload = googleAuthService.verifyToken(idToken);
             String email = payload.getEmail();
 
-            var userOptional = userRepository.findByEmail(email);
-            if (userOptional.isPresent()) {
-                User user = userOptional.get();
-                if (!user.getActive()) {
-                    throw new WebApplicationException("Account is disabled", Response.Status.FORBIDDEN);
-                }
-                AuthResponse auth = generateAuthResponse(user);
-                return new VerifyOtpResponse(auth.token(), false, email, auth);
+            List<User> users = userRepository.listByEmail(email);
+            if (!users.isEmpty()) {
+                // Return global token and available hospitals
+                String globalToken = generateGlobalToken(email);
+                List<HospitalInfo> hospitals = users.stream()
+                        .filter(User::getActive)
+                        .map(u -> new HospitalInfo(u.getHospital().getId(), u.getHospital().getName(),
+                                u.getRoles().stream().map(Enum::name).collect(Collectors.toSet())))
+                        .collect(Collectors.toList());
+                return new VerifyOtpResponse(globalToken, false, email, hospitals);
             } else {
                 // New user - return metadata for registration
                 return new VerifyOtpResponse(null, true, email, null);
@@ -72,40 +80,39 @@ public class AuthService {
     }
 
     public VerifyOtpResponse verifyOtp(VerifyOtpRequest request) {
-        // Validate but do NOT consume if new user (so they can register)
-        // Check if user exists first
-        var userOptional = userRepository.findByEmail(request.email());
-        boolean consume = userOptional.isPresent();
+        List<User> users = userRepository.listByEmail(request.email());
+        boolean consume = !users.isEmpty();
 
         boolean isValid = otpService.validateOtp(request.email(), request.otp(), consume);
         if (!isValid) {
             throw new WebApplicationException("Invalid or expired OTP", Response.Status.UNAUTHORIZED);
         }
 
-        if (userOptional.isPresent()) {
-            User user = userOptional.get();
-            if (!user.getActive()) {
-                throw new WebApplicationException("Account is disabled", Response.Status.FORBIDDEN);
-            }
-            AuthResponse auth = generateAuthResponse(user);
-            return new VerifyOtpResponse(auth.token(), false, request.email(), auth);
+        if (!users.isEmpty()) {
+            String globalToken = generateGlobalToken(request.email());
+            List<HospitalInfo> hospitals = users.stream()
+                    .filter(User::getActive)
+                    .map(u -> new HospitalInfo(u.getHospital().getId(), u.getHospital().getName(),
+                            u.getRoles().stream().map(Enum::name).collect(Collectors.toSet())))
+                    .collect(Collectors.toList());
+            return new VerifyOtpResponse(globalToken, false, request.email(), hospitals);
         } else {
-            return new VerifyOtpResponse(null, true, request.email(), null);
+            return new VerifyOtpResponse(generateGlobalToken(request.email()), true, request.email(), null);
         }
     }
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        // Validate and Consume OTP
-        if (!"GOOGLE".equals(request.otp())) {
-            boolean isValid = otpService.validateOtp(request.email(), request.otp(), true);
-            if (!isValid) {
-                throw new WebApplicationException("Invalid or expired OTP", Response.Status.UNAUTHORIZED);
-            }
+        // Validate Token
+        String email;
+        try {
+            email = validateGlobalToken(request.globalToken());
+        } catch (Exception e) {
+            throw new WebApplicationException("Invalid global token", Response.Status.UNAUTHORIZED);
         }
 
-        if (userRepository.findByEmail(request.email()).isPresent()) {
-            throw new WebApplicationException("User already exists", Response.Status.CONFLICT);
+        if (!request.email().equals(email)) {
+            throw new WebApplicationException("Email mismatch", Response.Status.UNAUTHORIZED);
         }
 
         // Create Hospital
@@ -135,6 +142,54 @@ public class AuthService {
                 + "-" + System.currentTimeMillis() % 10000;
     }
 
+    public AuthResponse exchangeToken(String globalToken, Long hospitalId) {
+        String email;
+        try {
+            email = validateGlobalToken(globalToken);
+        } catch (Exception e) {
+            throw new WebApplicationException("Invalid global token", Response.Status.UNAUTHORIZED);
+        }
+
+        List<User> users = userRepository.listByEmail(email);
+        User targetUser = users.stream()
+                .filter(u -> u.getHospital().getId().equals(hospitalId))
+                .findFirst()
+                .orElseThrow(
+                        () -> new WebApplicationException("Not a member of this hospital", Response.Status.FORBIDDEN));
+
+        if (!targetUser.getActive() || !targetUser.getHospital().getActive()) {
+            throw new WebApplicationException("Account or hospital is disabled", Response.Status.FORBIDDEN);
+        }
+
+        return generateAuthResponse(targetUser);
+    }
+
+    public List<HospitalInfo> listUserHospitals(String email) {
+        return userRepository.listByEmail(email).stream()
+                .filter(User::getActive)
+                .map(u -> new HospitalInfo(u.getHospital().getId(), u.getHospital().getName(),
+                        u.getRoles().stream().map(Enum::name).collect(Collectors.toSet())))
+                .collect(Collectors.toList());
+    }
+
+    private String generateGlobalToken(String email) {
+        return Jwt.issuer(issuer)
+                .upn(email)
+                .subject(email)
+                .claim("tokenType", "GLOBAL")
+                .expiresIn(3600) // 1 hour
+                .sign();
+    }
+
+    private String validateGlobalToken(String token) throws ParseException {
+        var jwt = jwtParser.parse(token);
+        String type = jwt.getClaim("tokenType");
+        if (!"GLOBAL".equals(type) && !"HOSPITAL".equals(type)) {
+            throw new WebApplicationException("Invalid token type", Response.Status.UNAUTHORIZED);
+        }
+        return jwt.getName();
+    }
+
     private AuthResponse generateAuthResponse(User user) {
         Set<String> roles = user.getRoles().stream()
                 .map(Enum::name)
@@ -145,6 +200,7 @@ public class AuthService {
                 .subject(user.getEmail())
                 .claim("hospitalId", user.getHospital().getId())
                 .claim("userId", user.getId())
+                .claim("tokenType", "HOSPITAL")
                 .groups(roles)
                 .expiresIn(3600 * 12)
                 .sign();

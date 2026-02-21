@@ -2,11 +2,13 @@ package com.ems.auth;
 
 import com.ems.auth.dto.AuthConfigResponse;
 import com.ems.auth.dto.AuthResponse;
+import com.ems.auth.dto.ExchangeTokenRequest;
 import com.ems.auth.dto.GoogleLoginRequest;
 import com.ems.auth.dto.OtpRequest;
 import com.ems.auth.dto.RegisterRequest;
 import com.ems.auth.dto.VerifyOtpRequest;
 import com.ems.auth.dto.VerifyOtpResponse;
+import jakarta.ws.rs.HeaderParam;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
@@ -16,6 +18,9 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.SecurityContext;
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.ws.rs.core.Context;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
@@ -72,5 +77,28 @@ public class AuthResource {
         log.info("Google login request");
         VerifyOtpResponse response = authService.verifyGoogleLogin(request.idToken());
         return Response.ok(response).build();
+    }
+
+    @POST
+    @Path("/select-hospital")
+    public Response selectHospital(
+            @HeaderParam("Authorization") String authHeader,
+            @Valid ExchangeTokenRequest request) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity("Missing or invalid Authorization header")
+                    .build();
+        }
+        String token = authHeader.substring(7);
+        AuthResponse response = authService.exchangeToken(token, request.hospitalId());
+        return Response.ok(response).build();
+    }
+
+    @GET
+    @Path("/me/hospitals")
+    @RolesAllowed({ "ADMIN", "DOCTOR", "NURSE", "STAFF" })
+    public Response getMyHospitals(@Context SecurityContext ctx) {
+        String email = ctx.getUserPrincipal().getName();
+        return Response.ok(authService.listUserHospitals(email)).build();
     }
 }
