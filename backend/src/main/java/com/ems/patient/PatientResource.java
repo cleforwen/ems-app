@@ -33,7 +33,7 @@ public class PatientResource {
     }
 
     @POST
-    @RolesAllowed({ "DOCTOR", "NURSE" })
+    @RolesAllowed({ "ADMIN", "STAFF", "DOCTOR", "NURSE" })
     public Response create(@Valid CreatePatientRequest request) {
         PatientResponse response = patientService.create(request);
         return Response.status(Response.Status.CREATED).entity(response).build();
@@ -41,7 +41,7 @@ public class PatientResource {
 
     @PUT
     @Path("/{id}")
-    @RolesAllowed({ "DOCTOR", "NURSE" })
+    @RolesAllowed({ "ADMIN", "STAFF", "DOCTOR", "NURSE" })
     public PatientResponse update(@PathParam("id") Long id, @Valid UpdatePatientRequest request) {
         return patientService.update(id, request);
     }
