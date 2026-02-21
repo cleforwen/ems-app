@@ -79,3 +79,27 @@ Located in `backend/src/main/resources/db/changelog/`
 - Billing system
 - Audit logs
 - HIPAA compliance
+
+## Missing Features (To-Do)
+
+### 1. Dialysis Treatment Tracking
+- Pre-dialysis assessments (weight, BP)
+- Intra-dialysis monitoring at intervals
+- Post-dialysis assessments
+- Machine & Station Management (assigning patients to machines/beds)
+- Treatment Prescriptions (dialysate type, duration, UF targets, needle sizes)
+- Scheduling (recurring dialysis shifts, e.g., MWF or TTS)
+
+### 2. Clinical Operations
+- Appointments & Scheduling (calendar interface for doctor consultations)
+- Doctor's Dashboard (My Patients, Pending Lab Results, Upcoming Appointments)
+
+### 3. Billing & Invoicing System
+- Invoices (generation for treatments, medications, and room usage)
+- Insurance Management (tracking coverage, claims, approvals)
+- Payments (recording partial/full payments and outstanding balances)
+
+### 4. Security & Compliance (HIPAA)
+- Audit Logs (tracking who viewed/modified which medical record and when)
+- Session Management (automatic logout after inactivity, strict password policies)
+- Access Control Policies (restricting doctor access to only assigned patients)

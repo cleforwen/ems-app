@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search } from 'lucide-react';
 import { CreatePatientDialog } from './CreatePatientDialog';
+import { EditPatientDialog } from './EditPatientDialog';
 import {
     Table,
     TableBody,
@@ -17,6 +18,13 @@ import { format } from 'date-fns';
 export default function PatientsPage() {
     const { data: patients, isLoading, isError } = usePatients();
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+
+    const handleEdit = (patient: Patient) => {
+        setSelectedPatient(patient);
+        setIsEditOpen(true);
+    };
 
     if (isLoading) return <div>Loading...</div>;
     if (isError) return <div>Error loading patients</div>;
@@ -31,6 +39,11 @@ export default function PatientsPage() {
             </div>
 
             <CreatePatientDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
+            <EditPatientDialog
+                open={isEditOpen}
+                onOpenChange={setIsEditOpen}
+                patient={selectedPatient}
+            />
 
             <div className="flex items-center gap-2">
                 <div className="relative flex-1 max-w-sm">
@@ -73,7 +86,8 @@ export default function PatientsPage() {
                                             {patient.active ? 'Active' : 'Inactive'}
                                         </span>
                                     </TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell className="text-right space-x-2">
+                                        <Button variant="ghost" size="sm" onClick={() => handleEdit(patient)}>Edit</Button>
                                         <Button variant="ghost" size="sm">View</Button>
                                     </TableCell>
                                 </TableRow>

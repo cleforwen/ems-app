@@ -35,8 +35,12 @@ public class HospitalService {
         hospital.setName(request.name());
         hospital.setCode(request.code());
         hospital.setAddress(request.address());
+        hospital.setCity(request.city());
+        hospital.setState(request.state());
+        hospital.setZip(request.zip());
         hospital.setPhone(request.phone());
         hospital.setEmail(request.email());
+        hospital.setWebsite(request.website());
         hospital.setCreatedBy(getCurrentUser());
 
         hospitalRepository.persist(hospital);
@@ -52,10 +56,18 @@ public class HospitalService {
             hospital.setName(request.name());
         if (request.address() != null)
             hospital.setAddress(request.address());
+        if (request.city() != null)
+            hospital.setCity(request.city());
+        if (request.state() != null)
+            hospital.setState(request.state());
+        if (request.zip() != null)
+            hospital.setZip(request.zip());
         if (request.phone() != null)
             hospital.setPhone(request.phone());
         if (request.email() != null)
             hospital.setEmail(request.email());
+        if (request.website() != null)
+            hospital.setWebsite(request.website());
         if (request.active() != null)
             hospital.setActive(request.active());
         hospital.setModifiedBy(getCurrentUser());
@@ -65,7 +77,8 @@ public class HospitalService {
 
     private HospitalResponse toResponse(Hospital h) {
         return new HospitalResponse(
-                h.getId(), h.getName(), h.getCode(), h.getAddress(), h.getPhone(), h.getEmail(), h.getActive());
+                h.getId(), h.getName(), h.getCode(), h.getAddress(), h.getCity(), h.getState(), h.getZip(),
+                h.getPhone(), h.getEmail(), h.getWebsite(), h.getActive());
     }
 
     private String getCurrentUser() {

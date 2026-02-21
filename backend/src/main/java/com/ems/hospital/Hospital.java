@@ -15,8 +15,12 @@ public class Hospital extends BaseEntity {
     private String code;
 
     private String address;
+    private String city;
+    private String state;
+    private String zip;
     private String phone;
     private String email;
+    private String website;
 
     @Column(nullable = false)
     private Boolean active = true;
@@ -46,6 +50,30 @@ public class Hospital extends BaseEntity {
         this.address = address;
     }
 
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public void setState(String state) {
+        this.state = state;
+    }
+
+    public String getZip() {
+        return zip;
+    }
+
+    public void setZip(String zip) {
+        this.zip = zip;
+    }
+
     public String getPhone() {
         return phone;
     }
@@ -60,6 +88,14 @@ public class Hospital extends BaseEntity {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getWebsite() {
+        return website;
+    }
+
+    public void setWebsite(String website) {
+        this.website = website;
     }
 
     public Boolean getActive() {

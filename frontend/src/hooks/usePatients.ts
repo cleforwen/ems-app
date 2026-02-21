@@ -27,6 +27,10 @@ export interface CreatePatientRequest {
     address?: string;
 }
 
+export interface UpdatePatientRequest extends Partial<CreatePatientRequest> {
+    active?: boolean;
+}
+
 const fetchPatients = async (): Promise<Patient[]> => {
     const { data } = await api.get<Patient[]>('/patients');
     return data;
@@ -39,6 +43,11 @@ const fetchPatient = async (id: string): Promise<Patient> => {
 
 const createPatient = async (data: CreatePatientRequest): Promise<Patient> => {
     const { data: response } = await api.post<Patient>('/patients', data);
+    return response;
+};
+
+const updatePatient = async ({ id, data }: { id: number, data: UpdatePatientRequest }): Promise<Patient> => {
+    const { data: response } = await api.put<Patient>(`/patients/${id}`, data);
     return response;
 };
 
@@ -63,6 +72,17 @@ export const useCreatePatient = () => {
         mutationFn: createPatient,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['patients'] });
+        },
+    });
+};
+
+export const useUpdatePatient = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: updatePatient,
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['patients'] });
+            queryClient.invalidateQueries({ queryKey: ['patient', variables.id.toString()] });
         },
     });
 };

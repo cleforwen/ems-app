@@ -10,5 +10,6 @@
     <include file="003-create-patient.xml" relativeToChangelogFile="true"/>
     <include file="004-update-user-password-nullable.xml" relativeToChangelogFile="true"/>
     <include file="005-multi-hospital-users.xml" relativeToChangelogFile="true"/>
+    <include file="006-add-hospital-details.xml" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>
