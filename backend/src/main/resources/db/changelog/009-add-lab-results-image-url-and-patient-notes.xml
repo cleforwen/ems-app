@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="009-add-lab-results-image-url" author="system">
+        <addColumn tableName="lab_results">
+            <column name="image_url" type="VARCHAR(500)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="009-create-patient-notes" author="system">
+        <createTable tableName="patient_notes">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="patient_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by_user" type="BIGINT"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="modified_by" type="VARCHAR(255)"/>
+            <column name="created_at" type="TIMESTAMP"/>
+            <column name="modified_at" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="patient_notes" baseColumnNames="patient_id"
+                                 referencedTableName="patients" referencedColumnNames="id"
+                                 constraintName="fk_patient_notes_patient"/>
+        <addForeignKeyConstraint baseTableName="patient_notes" baseColumnNames="created_by_user"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_patient_notes_user"/>
+    </changeSet>
+
+</databaseChangeLog>

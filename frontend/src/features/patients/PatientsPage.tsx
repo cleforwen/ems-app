@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { usePatients, Patient } from '@/hooks/usePatients';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +18,8 @@ import {
 import { format } from 'date-fns';
 
 export default function PatientsPage() {
+    const navigate = useNavigate();
+    const { hospitalId } = useParams();
     const [page, setPage] = useState(0);
     const [size, setSize] = useState(20);
     const [search, setSearch] = useState('');
@@ -44,6 +47,10 @@ export default function PatientsPage() {
     const handleEdit = (patient: Patient) => {
         setSelectedPatient(patient);
         setIsEditOpen(true);
+    };
+
+    const handleView = (patient: Patient) => {
+        navigate(`/hospital/${hospitalId}/patients/${patient.id}`);
     };
 
     const handlePageChange = (newPage: number) => {
@@ -127,7 +134,7 @@ export default function PatientsPage() {
                                     </TableCell>
                                     <TableCell className="text-right space-x-2">
                                         <Button variant="ghost" size="sm" onClick={() => handleEdit(patient)}>Edit</Button>
-                                        <Button variant="ghost" size="sm">View</Button>
+                                        <Button variant="ghost" size="sm" onClick={() => handleView(patient)}>View</Button>
                                     </TableCell>
                                 </TableRow>
                             ))

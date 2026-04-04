@@ -10,6 +10,7 @@ import { AllergiesList } from './components/AllergiesList';
 import { MedicationsList } from './components/MedicationsList';
 import { DiagnosesList } from './components/DiagnosesList';
 import { LabResultsList } from './components/LabResultsList';
+import { NotesList } from './components/NotesList';
 
 export default function PatientDetailsPage() {
     const { id } = useParams<{ id: string }>();
@@ -70,12 +71,13 @@ export default function PatientDetailsPage() {
 
                 <div className="md:col-span-3">
                     <Tabs defaultValue="vitals">
-                        <TabsList className="grid w-full grid-cols-5">
+                        <TabsList className="grid w-full grid-cols-6">
                             <TabsTrigger value="vitals">Vitals</TabsTrigger>
                             <TabsTrigger value="allergies">Allergies</TabsTrigger>
                             <TabsTrigger value="medications">Meds</TabsTrigger>
-                            <TabsTrigger value="diagnoses">Diagnoses</TabsTrigger>
+                            <TabsTrigger value="diagnoses">Dx</TabsTrigger>
                             <TabsTrigger value="labs">Labs</TabsTrigger>
+                            <TabsTrigger value="notes">Notes</TabsTrigger>
                         </TabsList>
 
                         <div className="mt-4">
@@ -93,6 +95,9 @@ export default function PatientDetailsPage() {
                             </TabsContent>
                             <TabsContent value="labs">
                                 <LabResultsList patientId={id!} />
+                            </TabsContent>
+                            <TabsContent value="notes">
+                                <NotesList patientId={id!} />
                             </TabsContent>
                         </div>
                     </Tabs>

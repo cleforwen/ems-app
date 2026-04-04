@@ -45,6 +45,9 @@ public class LabResult extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "image_url")
+    private String imageUrl;
+
     public enum Status {
         NORMAL, ABNORMAL, CRITICAL
     }

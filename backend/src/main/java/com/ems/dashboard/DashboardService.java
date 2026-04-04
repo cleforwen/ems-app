@@ -164,6 +164,7 @@ public class DashboardService {
                 l.getOrderedBy() != null
                         ? l.getOrderedBy().getFirstName() + " " + l.getOrderedBy().getLastName()
                         : null,
-                l.getNotes());
+                l.getNotes(),
+                l.getImageUrl());
     }
 }

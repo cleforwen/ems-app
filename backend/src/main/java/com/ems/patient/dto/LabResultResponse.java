@@ -15,5 +15,6 @@ public record LabResultResponse(
         LocalDateTime performedAt,
         Long orderedById,
         String orderedByName,
-        String notes) {
+        String notes,
+        String imageUrl) {
 }

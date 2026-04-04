@@ -13,5 +13,6 @@ public record CreateLabResultRequest(
         String referenceRange,
         LabResult.Status status,
         @NotNull(message = "Performed at timestamp is required") LocalDateTime performedAt,
-        String notes) {
+        String notes,
+        String imageUrl) {
 }

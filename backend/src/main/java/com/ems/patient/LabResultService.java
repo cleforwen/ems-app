@@ -1,5 +1,6 @@
 package com.ems.patient;
 
+import com.ems.common.service.FileUploadService;
 import com.ems.patient.dto.CreateLabResultRequest;
 import com.ems.patient.dto.LabResultResponse;
 import com.ems.patient.repository.LabResultRepository;
@@ -13,7 +14,11 @@ import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
+import org.jboss.resteasy.reactive.multipart.FileUpload;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,6 +35,8 @@ public class LabResultService {
     JsonWebToken jwt;
     @Inject
     Logger log;
+    @Inject
+    FileUploadService fileUploadService;
 
     public List<LabResultResponse> list(Long patientId) {
         verifyPatientAccess(patientId);
@@ -61,10 +68,48 @@ public class LabResultService {
         labResult.setPerformedAt(request.performedAt());
         labResult.setOrderedBy(orderer);
         labResult.setNotes(request.notes());
+        labResult.setImageUrl(request.imageUrl());
 
         labResult.setCreatedBy(jwt.getName());
         labResultRepository.persist(labResult);
         log.debugf("Created lab result for patient %d: %s", patientId, request.testName());
+
+        return toResponse(labResult);
+    }
+
+    @Transactional
+    public LabResultResponse createWithImage(Long patientId, CreateLabResultRequest request, FileUpload file) throws IOException {
+        Patient patient = verifyPatientAccess(patientId);
+
+        User orderer = null;
+        Object userIdClaim = jwt.getClaim("userId");
+        if (userIdClaim != null) {
+            orderer = userRepository.findById(Long.parseLong(userIdClaim.toString()));
+        }
+
+        String imageUrl = null;
+        if (file != null && file.fileName() != null) {
+            try (InputStream inputStream = Files.newInputStream(file.uploadedFile())) {
+                imageUrl = fileUploadService.uploadFile(inputStream, file.fileName(), "lab-results");
+            }
+        }
+
+        LabResult labResult = new LabResult();
+        labResult.setPatient(patient);
+        labResult.setTestName(request.testName());
+        labResult.setTestCode(request.testCode());
+        labResult.setResult(request.result());
+        labResult.setUnit(request.unit());
+        labResult.setReferenceRange(request.referenceRange());
+        labResult.setStatus(request.status());
+        labResult.setPerformedAt(request.performedAt());
+        labResult.setOrderedBy(orderer);
+        labResult.setNotes(request.notes());
+        labResult.setImageUrl(imageUrl);
+
+        labResult.setCreatedBy(jwt.getName());
+        labResultRepository.persist(labResult);
+        log.debugf("Created lab result with image for patient %d: %s", patientId, request.testName());
 
         return toResponse(labResult);
     }
@@ -104,6 +149,7 @@ public class LabResultService {
                 l.getOrderedBy() != null ? l.getOrderedBy().getId() : null,
                 l.getOrderedBy() != null ? l.getOrderedBy().getFirstName() + " " + l.getOrderedBy().getLastName()
                         : null,
-                l.getNotes());
+                l.getNotes(),
+                l.getImageUrl());
     }
 }

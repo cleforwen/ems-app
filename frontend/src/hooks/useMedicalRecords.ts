@@ -74,6 +74,7 @@ export interface LabResult {
     performedAt: string;
     orderedByName?: string;
     notes?: string;
+    imageUrl?: string;
 }
 
 export interface CreateLabResultRequest {
@@ -172,6 +173,32 @@ export const useCreateLabResult = (patientId: string) => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (data: CreateLabResultRequest) => createRecord<LabResult, CreateLabResultRequest>(patientId, 'lab-results', data),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lab-results', patientId] }),
+    });
+};
+
+export const useCreateLabResultWithImage = (patientId: string) => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ data, image }: { data: CreateLabResultRequest; image?: File }) => {
+            if (!image) {
+                return createRecord<LabResult, CreateLabResultRequest>(patientId, 'lab-results', data);
+            }
+            const formData = new FormData();
+            formData.append('testName', data.testName);
+            if (data.testCode) formData.append('testCode', data.testCode);
+            formData.append('result', data.result);
+            if (data.unit) formData.append('unit', data.unit);
+            if (data.referenceRange) formData.append('referenceRange', data.referenceRange);
+            if (data.status) formData.append('status', data.status);
+            formData.append('performedAt', data.performedAt);
+            if (data.notes) formData.append('notes', data.notes);
+            formData.append('image', image);
+            const response = await api.post<LabResult>(`/patients/${patientId}/lab-results/multipart`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            return response.data;
+        },
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lab-results', patientId] }),
     });
 };

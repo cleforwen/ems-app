@@ -13,5 +13,6 @@
     <include file="006-add-hospital-details.xml" relativeToChangelogFile="true"/>
     <include file="007-create-appointment.xml" relativeToChangelogFile="true"/>
     <include file="008-hospital-appointments-enabled.xml" relativeToChangelogFile="true"/>
+    <include file="009-add-lab-results-image-url-and-patient-notes.xml" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>
