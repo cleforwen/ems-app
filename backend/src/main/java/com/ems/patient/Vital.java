@@ -6,6 +6,11 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 @Entity
 @Table(name = "vitals")
 public class Vital extends BaseEntity {
@@ -43,100 +48,4 @@ public class Vital extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
-    // Getters and Setters
-    public Patient getPatient() {
-        return patient;
-    }
-
-    public void setPatient(Patient patient) {
-        this.patient = patient;
-    }
-
-    public LocalDateTime getRecordedAt() {
-        return recordedAt;
-    }
-
-    public void setRecordedAt(LocalDateTime recordedAt) {
-        this.recordedAt = recordedAt;
-    }
-
-    public User getRecordedBy() {
-        return recordedBy;
-    }
-
-    public void setRecordedBy(User recordedBy) {
-        this.recordedBy = recordedBy;
-    }
-
-    public BigDecimal getTemperature() {
-        return temperature;
-    }
-
-    public void setTemperature(BigDecimal temperature) {
-        this.temperature = temperature;
-    }
-
-    public Integer getBloodPressureSystolic() {
-        return bloodPressureSystolic;
-    }
-
-    public void setBloodPressureSystolic(Integer bloodPressureSystolic) {
-        this.bloodPressureSystolic = bloodPressureSystolic;
-    }
-
-    public Integer getBloodPressureDiastolic() {
-        return bloodPressureDiastolic;
-    }
-
-    public void setBloodPressureDiastolic(Integer bloodPressureDiastolic) {
-        this.bloodPressureDiastolic = bloodPressureDiastolic;
-    }
-
-    public Integer getHeartRate() {
-        return heartRate;
-    }
-
-    public void setHeartRate(Integer heartRate) {
-        this.heartRate = heartRate;
-    }
-
-    public Integer getRespiratoryRate() {
-        return respiratoryRate;
-    }
-
-    public void setRespiratoryRate(Integer respiratoryRate) {
-        this.respiratoryRate = respiratoryRate;
-    }
-
-    public BigDecimal getOxygenSaturation() {
-        return oxygenSaturation;
-    }
-
-    public void setOxygenSaturation(BigDecimal oxygenSaturation) {
-        this.oxygenSaturation = oxygenSaturation;
-    }
-
-    public BigDecimal getWeight() {
-        return weight;
-    }
-
-    public void setWeight(BigDecimal weight) {
-        this.weight = weight;
-    }
-
-    public BigDecimal getHeight() {
-        return height;
-    }
-
-    public void setHeight(BigDecimal height) {
-        this.height = height;
-    }
-
-    public String getNotes() {
-        return notes;
-    }
-
-    public void setNotes(String notes) {
-        this.notes = notes;
-    }
 }

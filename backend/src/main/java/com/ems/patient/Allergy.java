@@ -3,6 +3,11 @@ package com.ems.patient;
 import com.ems.common.entity.BaseEntity;
 import jakarta.persistence.*;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 @Entity
 @Table(name = "allergies")
 public class Allergy extends BaseEntity {
@@ -26,44 +31,4 @@ public class Allergy extends BaseEntity {
         MILD, MODERATE, SEVERE
     }
 
-    // Getters and Setters
-    public Patient getPatient() {
-        return patient;
-    }
-
-    public void setPatient(Patient patient) {
-        this.patient = patient;
-    }
-
-    public String getAllergen() {
-        return allergen;
-    }
-
-    public void setAllergen(String allergen) {
-        this.allergen = allergen;
-    }
-
-    public String getReaction() {
-        return reaction;
-    }
-
-    public void setReaction(String reaction) {
-        this.reaction = reaction;
-    }
-
-    public Severity getSeverity() {
-        return severity;
-    }
-
-    public void setSeverity(Severity severity) {
-        this.severity = severity;
-    }
-
-    public String getNotes() {
-        return notes;
-    }
-
-    public void setNotes(String notes) {
-        this.notes = notes;
-    }
 }

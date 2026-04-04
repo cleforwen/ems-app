@@ -5,6 +5,11 @@ import com.ems.user.User;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 @Entity
 @Table(name = "diagnoses")
 public class Diagnosis extends BaseEntity {
@@ -36,60 +41,4 @@ public class Diagnosis extends BaseEntity {
         ACTIVE, RESOLVED, CHRONIC
     }
 
-    // Getters and Setters
-    public Patient getPatient() {
-        return patient;
-    }
-
-    public void setPatient(Patient patient) {
-        this.patient = patient;
-    }
-
-    public String getIcdCode() {
-        return icdCode;
-    }
-
-    public void setIcdCode(String icdCode) {
-        this.icdCode = icdCode;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public LocalDate getDiagnosedAt() {
-        return diagnosedAt;
-    }
-
-    public void setDiagnosedAt(LocalDate diagnosedAt) {
-        this.diagnosedAt = diagnosedAt;
-    }
-
-    public User getDiagnosedBy() {
-        return diagnosedBy;
-    }
-
-    public void setDiagnosedBy(User diagnosedBy) {
-        this.diagnosedBy = diagnosedBy;
-    }
-
-    public Status getStatus() {
-        return status;
-    }
-
-    public void setStatus(Status status) {
-        this.status = status;
-    }
-
-    public String getNotes() {
-        return notes;
-    }
-
-    public void setNotes(String notes) {
-        this.notes = notes;
-    }
 }
