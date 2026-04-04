@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
+import { PagedResponse } from '../types/pagination';
 
 export type UserRole = 'ADMIN' | 'DOCTOR' | 'NURSE' | 'STAFF';
 
@@ -28,8 +29,20 @@ export interface UpdateUserRequest {
     password?: string;
 }
 
-const fetchUsers = async (): Promise<User[]> => {
-    const { data } = await api.get<User[]>('/users');
+interface UserQueryParams {
+    page?: number;
+    size?: number;
+    search?: string;
+}
+
+const fetchUsers = async (params?: UserQueryParams): Promise<PagedResponse<User>> => {
+    const searchParams = new URLSearchParams();
+    if (params?.page !== undefined) searchParams.append('page', params.page.toString());
+    if (params?.size !== undefined) searchParams.append('size', params.size.toString());
+    if (params?.search) searchParams.append('search', params.search);
+
+    const query = searchParams.toString();
+    const { data } = await api.get<PagedResponse<User>>(`/users${query ? `?${query}` : ''}`);
     return data;
 };
 
@@ -52,10 +65,10 @@ const deleteUser = async (id: number): Promise<void> => {
     await api.delete(`/users/${id}`);
 };
 
-export const useUsers = () => {
+export const useUsers = (params?: UserQueryParams) => {
     return useQuery({
-        queryKey: ['users'],
-        queryFn: fetchUsers,
+        queryKey: ['users', params],
+        queryFn: () => fetchUsers(params),
     });
 };
 

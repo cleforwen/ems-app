@@ -1,5 +1,6 @@
 package com.ems.patient;
 
+import com.ems.common.dto.PagedResponse;
 import com.ems.hospital.Hospital;
 import com.ems.hospital.HospitalRepository;
 import com.ems.patient.dto.CreatePatientRequest;
@@ -14,6 +15,7 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.jboss.logging.Logger;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,15 +31,41 @@ public class PatientService {
     UserRepository userRepository;
     @Inject
     JsonWebToken jwt;
+    @Inject
+    Logger log;
 
     public List<PatientResponse> list() {
-        return patientRepository.list("hospital.id", getHospitalId()).stream()
+        List<PatientResponse> patients = patientRepository.list("hospital.id", getHospitalId()).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+        log.debugf("Listing patients for hospital %d: %d results", getHospitalId(), Integer.valueOf(patients.size()));
+        return patients;
+    }
+
+    public PagedResponse<PatientResponse> listPaginated(int page, int size, String search) {
+        Long hospitalId = getHospitalId();
+        List<Patient> patients;
+        long total;
+
+        if (search != null && !search.trim().isEmpty()) {
+            patients = patientRepository.searchByHospitalId(hospitalId, search.trim(), page, size);
+            total = patientRepository.countSearchByHospitalId(hospitalId, search.trim());
+        } else {
+            patients = patientRepository.findByHospitalIdPaginated(hospitalId, page, size);
+            total = patientRepository.countByHospitalId(hospitalId);
+        }
+
+        List<PatientResponse> data = patients.stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+
+        log.debug("Listed " + data.size() + " patients for hospital " + hospitalId + " (total: " + total + ", page: " + page + ")");
+        return PagedResponse.of(data, total, page, size);
     }
 
     public PatientResponse findById(Long id) {
         Patient patient = findPatientScoped(id);
+        log.debugf("Finding patient by ID: %d", id);
         return toResponse(patient);
     }
 
@@ -72,6 +100,7 @@ public class PatientService {
 
         patient.setCreatedBy(jwt.getName());
         patientRepository.persist(patient);
+        log.infof("Created patient: %s %s with MRN %s", request.firstName(), request.lastName(), generatedMrn);
         return toResponse(patient);
     }
 
@@ -109,6 +138,7 @@ public class PatientService {
         }
 
         patient.setModifiedBy(jwt.getName());
+        log.debugf("Updated patient: %d", id);
         return toResponse(patient);
     }
 
@@ -117,14 +147,17 @@ public class PatientService {
         Patient patient = findPatientScoped(id);
         patient.setActive(false);
         patient.setModifiedBy(jwt.getName());
+        log.debugf("Deactivated patient: %d", id);
     }
 
     private Patient findPatientScoped(Long id) {
         Patient patient = patientRepository.findById(id);
         if (patient == null) {
+            log.warnf("Patient not found: %d", id);
             throw new WebApplicationException("Patient not found", Response.Status.NOT_FOUND);
         }
         if (!patient.getHospital().getId().equals(getHospitalId())) {
+            log.warnf("Access denied to patient: %d (hospital mismatch)", id);
             throw new WebApplicationException("Access denied", Response.Status.FORBIDDEN);
         }
         return patient;

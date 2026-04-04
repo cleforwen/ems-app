@@ -3,6 +3,7 @@ package com.ems.appointment;
 import com.ems.appointment.dto.AppointmentResponse;
 import com.ems.appointment.dto.CreateAppointmentRequest;
 import com.ems.appointment.dto.UpdateAppointmentRequest;
+import com.ems.common.dto.PagedResponse;
 import com.ems.hospital.Hospital;
 import com.ems.hospital.HospitalRepository;
 import com.ems.patient.Patient;
@@ -15,6 +16,7 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.jboss.logging.Logger;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -33,6 +35,8 @@ public class AppointmentService {
     HospitalRepository hospitalRepository;
     @Inject
     JsonWebToken jwt;
+    @Inject
+    Logger log;
 
     public List<AppointmentResponse> list(Long doctorId, LocalDate from, LocalDate to, String status) {
         Long hospitalId = getHospitalId();
@@ -58,13 +62,57 @@ public class AppointmentService {
                     .collect(Collectors.toList());
         }
 
+        log.debugf("Listed %d appointments for hospital %d", Integer.valueOf(appointments.size()), hospitalId);
         return appointments.stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
+    public PagedResponse<AppointmentResponse> listPaginated(Long doctorId, LocalDate from, LocalDate to, String status, int page, int size) {
+        Long hospitalId = getHospitalId();
+        List<Appointment> appointments;
+        long total;
+
+        if (doctorId != null && from != null && to != null) {
+            appointments = appointmentRepository.findByDateRangeAndHospitalId(from, to, hospitalId)
+                    .stream().filter(a -> a.getDoctor().getId().equals(doctorId))
+                    .collect(Collectors.toList());
+        } else if (from != null && to != null) {
+            appointments = appointmentRepository.findByDateRangeAndHospitalId(from, to, hospitalId);
+        } else if (doctorId != null) {
+            appointments = appointmentRepository.findByDoctorIdAndHospitalId(doctorId, hospitalId);
+        } else {
+            appointments = appointmentRepository.findByHospitalId(hospitalId);
+        }
+
+        if (status != null && !status.isEmpty()) {
+            Appointment.Status filterStatus = Appointment.Status.valueOf(status);
+            appointments = appointments.stream()
+                    .filter(a -> a.getStatus() == filterStatus)
+                    .collect(Collectors.toList());
+        }
+
+        total = appointments.size();
+        int fromIndex = page * size;
+        int toIndex = Math.min(fromIndex + size, (int) total);
+        
+        if (fromIndex >= appointments.size()) {
+            appointments = List.of();
+        } else {
+            appointments = appointments.subList(fromIndex, toIndex);
+        }
+
+        List<AppointmentResponse> data = appointments.stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+
+        log.debug("Listed " + data.size() + " appointments for hospital " + hospitalId + " (total: " + total + ")");
+        return PagedResponse.of(data, total, page, size);
+    }
+
     public AppointmentResponse findById(Long id) {
         Appointment appointment = findAppointmentScoped(id);
+        log.debugf("Finding appointment by ID: %d", id);
         return toResponse(appointment);
     }
 
@@ -110,6 +158,8 @@ public class AppointmentService {
 
         appointment.setCreatedBy(jwt.getName());
         appointmentRepository.persist(appointment);
+        log.infof("Created appointment for patient %d with doctor %d on %s", 
+                patient.getId(), doctor.getId(), request.appointmentDate());
         return toResponse(appointment);
     }
 
@@ -167,9 +217,11 @@ public class AppointmentService {
     private Appointment findAppointmentScoped(Long id) {
         Appointment appointment = appointmentRepository.findById(id);
         if (appointment == null) {
+            log.warnf("Appointment not found: %d", id);
             throw new WebApplicationException("Appointment not found", Response.Status.NOT_FOUND);
         }
         if (!appointment.getHospital().getId().equals(getHospitalId())) {
+            log.warnf("Access denied to appointment: %d", id);
             throw new WebApplicationException("Access denied", Response.Status.FORBIDDEN);
         }
         return appointment;

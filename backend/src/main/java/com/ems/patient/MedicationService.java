@@ -12,6 +12,7 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.jboss.logging.Logger;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -27,12 +28,16 @@ public class MedicationService {
     UserRepository userRepository;
     @Inject
     JsonWebToken jwt;
+    @Inject
+    Logger log;
 
     public List<MedicationResponse> list(Long patientId) {
         verifyPatientAccess(patientId);
-        return medicationRepository.findByPatientId(patientId).stream()
+        List<MedicationResponse> medications = medicationRepository.findByPatientId(patientId).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+        log.debugf("Listed %d medications for patient %d", Integer.valueOf(medications.size()), patientId);
+        return medications;
     }
 
     @Transactional
@@ -53,11 +58,12 @@ public class MedicationService {
         medication.setStartDate(request.startDate());
         medication.setEndDate(request.endDate());
         medication.setPrescribedBy(prescriber);
-        medication.setActive(true); // Default to active
+        medication.setActive(true);
         medication.setNotes(request.notes());
 
         medication.setCreatedBy(jwt.getName());
         medicationRepository.persist(medication);
+        log.debugf("Created medication for patient %d: %s", patientId, request.name());
 
         return toResponse(medication);
     }
@@ -65,16 +71,19 @@ public class MedicationService {
     private Patient verifyPatientAccess(Long patientId) {
         Patient patient = patientRepository.findById(patientId);
         if (patient == null) {
+            log.warnf("Patient not found: %d", patientId);
             throw new WebApplicationException("Patient not found", Response.Status.NOT_FOUND);
         }
 
         Object hospitalIdClaim = jwt.getClaim("hospitalId");
         if (hospitalIdClaim == null) {
+            log.warn("Invalid token - missing hospitalId");
             throw new WebApplicationException("Invalid token", Response.Status.UNAUTHORIZED);
         }
 
         Long hospitalId = Long.parseLong(hospitalIdClaim.toString());
         if (!patient.getHospital().getId().equals(hospitalId)) {
+            log.warnf("Access denied to patient: %d", patientId);
             throw new WebApplicationException("Access denied", Response.Status.FORBIDDEN);
         }
         return patient;

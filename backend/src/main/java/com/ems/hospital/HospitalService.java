@@ -9,6 +9,7 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class HospitalService {
@@ -19,15 +20,23 @@ public class HospitalService {
     @Inject
     JsonWebToken jwt;
 
+    @Inject
+    Logger log;
+
     public HospitalResponse findById(Long id) {
         Hospital hospital = hospitalRepository.findByIdOptional(id)
-                .orElseThrow(() -> new WebApplicationException("Hospital not found", Response.Status.NOT_FOUND));
+                .orElseThrow(() -> {
+                    log.warnf("Hospital not found: %d", id);
+                    return new WebApplicationException("Hospital not found", Response.Status.NOT_FOUND);
+                });
+        log.debugf("Finding hospital by ID: %d", id);
         return toResponse(hospital);
     }
 
     @Transactional
     public HospitalResponse create(CreateHospitalRequest request) {
         if (hospitalRepository.findByCode(request.code()).isPresent()) {
+            log.warnf("Hospital creation failed - code already exists: %s", request.code());
             throw new WebApplicationException("Hospital code already exists", Response.Status.CONFLICT);
         }
 
@@ -44,6 +53,7 @@ public class HospitalService {
         hospital.setCreatedBy(getCurrentUser());
 
         hospitalRepository.persist(hospital);
+        log.infof("Created hospital: %s (Code: %s)", request.name(), request.code());
         return toResponse(hospital);
     }
 

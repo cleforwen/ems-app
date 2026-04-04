@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUsers } from '../../hooks/useUsers';
 import {
     Table,
@@ -13,20 +13,41 @@ import { CreateUserDialog } from './CreateUserDialog';
 import { Plus, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Pagination } from '@/components/ui/pagination';
 
 export default function UsersPage() {
-    const { data: users, isLoading, error } = useUsers();
-    const [open, setOpen] = useState(false);
+    const [page, setPage] = useState(0);
+    const [size, setSize] = useState(20);
     const [search, setSearch] = useState('');
+    const [searchInput, setSearchInput] = useState('');
 
-    if (isLoading) return <div className="p-8">Loading users...</div>;
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setSearch(searchInput);
+            setPage(0);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchInput]);
+
+    const { data: response, isLoading, error } = useUsers({ page, size, search });
+    const users = response?.data;
+    const total = response?.total ?? 0;
+    const totalPages = response?.totalPages ?? 0;
+
+    const isInitialLoading = isLoading && users === undefined;
+
+    const [open, setOpen] = useState(false);
+
+    const handlePageChange = (newPage: number) => {
+        setPage(newPage);
+    };
+
+    const handleSizeChange = (newSize: number) => {
+        setSize(newSize);
+        setPage(0);
+    };
+
     if (error) return <div className="p-8">Error loading users</div>;
-
-    const filteredUsers = users?.filter(user =>
-        user.firstName.toLowerCase().includes(search.toLowerCase()) ||
-        user.lastName.toLowerCase().includes(search.toLowerCase()) ||
-        user.email.toLowerCase().includes(search.toLowerCase())
-    );
 
     return (
         <div className="space-y-6">
@@ -44,8 +65,8 @@ export default function UsersPage() {
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <Input
                     placeholder="Search users..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
                     className="max-w-sm"
                 />
             </div>
@@ -62,14 +83,20 @@ export default function UsersPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredUsers?.length === 0 ? (
+                        {isInitialLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                    Loading users...
+                                </TableCell>
+                            </TableRow>
+                        ) : users?.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={5} className="h-24 text-center">
                                     No users found.
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredUsers?.map((user) => (
+                            users?.map((user) => (
                                 <TableRow key={user.id}>
                                     <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
                                     <TableCell>{user.email}</TableCell>
@@ -94,6 +121,15 @@ export default function UsersPage() {
                     </TableBody>
                 </Table>
             </div>
+
+            <Pagination
+                page={page}
+                size={size}
+                total={total}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                onSizeChange={handleSizeChange}
+            />
 
             <CreateUserDialog open={open} onOpenChange={setOpen} />
         </div>

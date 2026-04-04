@@ -14,6 +14,7 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
 
 import java.util.List;
 import java.util.Set;
@@ -39,6 +40,9 @@ public class AuthService {
     @Inject
     GoogleAuthService googleAuthService;
 
+    @Inject
+    Logger log;
+
     @ConfigProperty(name = "mp.jwt.verify.issuer")
     String issuer;
 
@@ -47,11 +51,8 @@ public class AuthService {
 
     public void requestOtp(OtpRequest request) {
         String otp = otpService.generateOtp(request.email());
-
-        // Send email (SMTP or API depending on profile)
         emailService.sendText(request.email(), "Your OTP Code", "Your OTP code is: " + otp);
-
-        System.out.println("OTP for " + request.email() + ": " + otp); // For dev/demo purposes
+        log.debugf("OTP generated for %s", request.email());
     }
 
     public VerifyOtpResponse verifyGoogleLogin(String idToken) {
@@ -61,20 +62,21 @@ public class AuthService {
 
             List<User> users = userRepository.listByEmail(email);
             if (!users.isEmpty()) {
-                // Return global token and available hospitals
                 String globalToken = generateGlobalToken(email);
                 List<HospitalInfo> hospitals = users.stream()
                         .filter(User::getActive)
                         .map(u -> new HospitalInfo(u.getHospital().getId(), u.getHospital().getName(),
                                 u.getRoles().stream().map(Enum::name).collect(Collectors.toSet())))
                         .collect(Collectors.toList());
+                log.infof("Google login successful for existing user: %s (%d hospitals)", email, hospitals.size());
                 return new VerifyOtpResponse(globalToken, false, email, hospitals);
             } else {
-                // New user - return global token + metadata for registration
                 String globalToken = generateGlobalToken(email);
+                log.infof("Google login for new user: %s", email);
                 return new VerifyOtpResponse(globalToken, true, email, null);
             }
         } catch (Exception e) {
+            log.warnf("Google authentication failed: %s", e.getMessage());
             throw new WebApplicationException("Google Authentication failed: " + e.getMessage(),
                     Response.Status.UNAUTHORIZED);
         }
@@ -86,6 +88,7 @@ public class AuthService {
 
         boolean isValid = otpService.validateOtp(request.email(), request.otp(), consume);
         if (!isValid) {
+            log.warnf("Invalid OTP for %s", request.email());
             throw new WebApplicationException("Invalid or expired OTP", Response.Status.UNAUTHORIZED);
         }
 
@@ -96,27 +99,29 @@ public class AuthService {
                     .map(u -> new HospitalInfo(u.getHospital().getId(), u.getHospital().getName(),
                             u.getRoles().stream().map(Enum::name).collect(Collectors.toSet())))
                     .collect(Collectors.toList());
+            log.infof("OTP verification successful for existing user: %s", request.email());
             return new VerifyOtpResponse(globalToken, false, request.email(), hospitals);
         } else {
+            log.infof("OTP verification successful for new user: %s", request.email());
             return new VerifyOtpResponse(generateGlobalToken(request.email()), true, request.email(), null);
         }
     }
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        // Validate Token
         String email;
         try {
             email = validateGlobalToken(request.globalToken());
         } catch (Exception e) {
+            log.warnf("Registration failed - invalid global token for %s", request.email());
             throw new WebApplicationException("Invalid global token", Response.Status.UNAUTHORIZED);
         }
 
         if (!request.email().equals(email)) {
+            log.warnf("Registration failed - email mismatch for %s", request.email());
             throw new WebApplicationException("Email mismatch", Response.Status.UNAUTHORIZED);
         }
 
-        // Create Hospital
         Hospital hospital = new Hospital();
         hospital.setName(request.hospitalName());
         hospital.setCode(generateHospitalCode(request.hospitalName()));
@@ -124,7 +129,6 @@ public class AuthService {
         hospital.setCreatedBy("system");
         hospitalRepository.persist(hospital);
 
-        // Create Admin User
         User user = new User();
         user.setHospital(hospital);
         user.setEmail(request.email());
@@ -135,6 +139,7 @@ public class AuthService {
         user.setCreatedBy("system");
         userRepository.persist(user);
 
+        log.infof("Hospital registered: %s (ID: %d) by %s", request.hospitalName(), hospital.getId(), request.email());
         return generateAuthResponse(user);
     }
 
@@ -148,6 +153,7 @@ public class AuthService {
         try {
             email = validateGlobalToken(globalToken);
         } catch (Exception e) {
+            log.warn("Token exchange failed - invalid global token");
             throw new WebApplicationException("Invalid global token", Response.Status.UNAUTHORIZED);
         }
 
@@ -156,12 +162,17 @@ public class AuthService {
                 .filter(u -> u.getHospital().getId().equals(hospitalId))
                 .findFirst()
                 .orElseThrow(
-                        () -> new WebApplicationException("Not a member of this hospital", Response.Status.FORBIDDEN));
+                        () -> {
+                            log.warnf("Token exchange failed - user not member of hospital %d", hospitalId);
+                            return new WebApplicationException("Not a member of this hospital", Response.Status.FORBIDDEN);
+                        });
 
         if (!targetUser.getActive() || !targetUser.getHospital().getActive()) {
+            log.warnf("Token exchange failed - account/hospital disabled for %s", email);
             throw new WebApplicationException("Account or hospital is disabled", Response.Status.FORBIDDEN);
         }
 
+        log.infof("Token exchanged for %s at hospital %d", email, hospitalId);
         return generateAuthResponse(targetUser);
     }
 

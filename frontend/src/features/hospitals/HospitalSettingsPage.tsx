@@ -1,17 +1,38 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useHospital, useUpdateHospital, UpdateHospitalRequest } from '../../hooks/useHospitals';
+import { useGenerateSeedData } from '../../hooks/useSeed';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
+import { FlaskConical, Loader2 } from 'lucide-react';
 
 export default function HospitalSettingsPage() {
     const { data: hospital, isLoading, error } = useHospital();
     const { mutate: updateHospital, isPending } = useUpdateHospital();
+    const { mutate: generateSeedData, isPending: isSeedPending } = useGenerateSeedData();
     const { toast } = useToast();
+
+    const handleGenerateSeedData = () => {
+        generateSeedData(undefined, {
+            onSuccess: (result) => {
+                toast({
+                    title: '✅ Mock Data Generated',
+                    description: `Created ${result.staffCreated} staff, ${result.patientsCreated} patients, and ${result.appointmentsCreated} appointments.`,
+                });
+            },
+            onError: (error: any) => {
+                toast({
+                    variant: 'destructive',
+                    title: 'Seed Failed',
+                    description: error.response?.data?.error || 'Failed to generate mock data.',
+                });
+            },
+        });
+    };
 
     const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<UpdateHospitalRequest>();
 
@@ -121,6 +142,52 @@ export default function HospitalSettingsPage() {
                         </Button>
                     </CardFooter>
                 </form>
+            </Card>
+
+            {/* ⚠️ TEMPORARY: Developer Tools — remove before production */}
+            <Card className="max-w-2xl border-dashed border-orange-400/60 bg-orange-50/30 dark:bg-orange-950/10">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                        <FlaskConical className="h-5 w-5" />
+                        Developer Tools
+                        <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-600 dark:bg-orange-900/40 dark:text-orange-400">
+                            TEMPORARY
+                        </span>
+                    </CardTitle>
+                    <CardDescription>
+                        Generate mock data for development and testing purposes. This will create
+                        <strong> 5,000 patients</strong>, <strong>1,000 appointments</strong>, and
+                        <strong> 200 staff members</strong> for your workspace.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex flex-row items-center justify-between rounded-lg border border-orange-200 bg-white p-4 dark:border-orange-800/40 dark:bg-transparent">
+                        <div className="space-y-0.5">
+                            <p className="text-sm font-medium">Generate Mock Data</p>
+                            <p className="text-xs text-muted-foreground">
+                                This action may take 30–60 seconds to complete.
+                            </p>
+                        </div>
+                        <Button
+                            variant="outline"
+                            className="border-orange-400 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/30"
+                            onClick={handleGenerateSeedData}
+                            disabled={isSeedPending}
+                        >
+                            {isSeedPending ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Generating...
+                                </>
+                            ) : (
+                                <>
+                                    <FlaskConical className="mr-2 h-4 w-4" />
+                                    Generate Mock Data
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                </CardContent>
             </Card>
         </div>
     );

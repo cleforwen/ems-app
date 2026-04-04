@@ -12,6 +12,7 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.jboss.logging.Logger;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,12 +29,16 @@ public class AllergyService {
     UserRepository userRepository;
     @Inject
     JsonWebToken jwt;
+    @Inject
+    Logger log;
 
     public List<AllergyResponse> list(Long patientId) {
         verifyPatientAccess(patientId);
-        return allergyRepository.findByPatientId(patientId).stream()
+        List<AllergyResponse> allergies = allergyRepository.findByPatientId(patientId).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+        log.debugf("Listed %d allergies for patient %d", Integer.valueOf(allergies.size()), patientId);
+        return allergies;
     }
 
     @Transactional
@@ -49,6 +54,7 @@ public class AllergyService {
 
         allergy.setCreatedBy(jwt.getName());
         allergyRepository.persist(allergy);
+        log.debugf("Created allergy for patient %d: %s", patientId, request.allergen());
 
         return toResponse(allergy);
     }
@@ -56,16 +62,19 @@ public class AllergyService {
     private Patient verifyPatientAccess(Long patientId) {
         Patient patient = patientRepository.findById(patientId);
         if (patient == null) {
+            log.warnf("Patient not found: %d", patientId);
             throw new WebApplicationException("Patient not found", Response.Status.NOT_FOUND);
         }
 
         Object hospitalIdClaim = jwt.getClaim("hospitalId");
         if (hospitalIdClaim == null) {
+            log.warn("Invalid token - missing hospitalId");
             throw new WebApplicationException("Invalid token", Response.Status.UNAUTHORIZED);
         }
 
         Long hospitalId = Long.parseLong(hospitalIdClaim.toString());
         if (!patient.getHospital().getId().equals(hospitalId)) {
+            log.warnf("Access denied to patient: %d", patientId);
             throw new WebApplicationException("Access denied", Response.Status.FORBIDDEN);
         }
         return patient;

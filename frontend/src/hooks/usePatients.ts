@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
+import { PagedResponse } from '../types/pagination';
 
 export interface Patient {
     id: number;
@@ -30,8 +31,20 @@ export interface UpdatePatientRequest extends Partial<CreatePatientRequest> {
     active?: boolean;
 }
 
-const fetchPatients = async (): Promise<Patient[]> => {
-    const { data } = await api.get<Patient[]>('/patients');
+interface PatientQueryParams {
+    page?: number;
+    size?: number;
+    search?: string;
+}
+
+const fetchPatients = async (params?: PatientQueryParams): Promise<PagedResponse<Patient>> => {
+    const searchParams = new URLSearchParams();
+    if (params?.page !== undefined) searchParams.append('page', params.page.toString());
+    if (params?.size !== undefined) searchParams.append('size', params.size.toString());
+    if (params?.search) searchParams.append('search', params.search);
+
+    const query = searchParams.toString();
+    const { data } = await api.get<PagedResponse<Patient>>(`/patients${query ? `?${query}` : ''}`);
     return data;
 };
 
@@ -50,10 +63,10 @@ const updatePatient = async ({ id, data }: { id: number, data: UpdatePatientRequ
     return response;
 };
 
-export const usePatients = () => {
+export const usePatients = (params?: PatientQueryParams) => {
     return useQuery({
-        queryKey: ['patients'],
-        queryFn: fetchPatients,
+        queryKey: ['patients', params],
+        queryFn: () => fetchPatients(params),
     });
 };
 

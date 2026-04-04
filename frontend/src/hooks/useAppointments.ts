@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
+import { PagedResponse } from '../types/pagination';
 
 export type AppointmentStatus = 'SCHEDULED' | 'CHECKED_IN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
 export type AppointmentType = 'CONSULTATION' | 'FOLLOW_UP' | 'ROUTINE_CHECK' | 'EMERGENCY' | 'LAB_REVIEW';
@@ -43,22 +44,30 @@ export interface UpdateAppointmentRequest {
     notes?: string;
 }
 
-interface AppointmentFilters {
+export interface AppointmentFilters {
     doctorId?: number;
     from?: string;
     to?: string;
     status?: string;
 }
 
-const fetchAppointments = async (filters?: AppointmentFilters): Promise<Appointment[]> => {
-    const params = new URLSearchParams();
-    if (filters?.doctorId) params.append('doctorId', filters.doctorId.toString());
-    if (filters?.from) params.append('from', filters.from);
-    if (filters?.to) params.append('to', filters.to);
-    if (filters?.status) params.append('status', filters.status);
+interface AppointmentQueryParams {
+    filters?: AppointmentFilters;
+    page?: number;
+    size?: number;
+}
 
-    const query = params.toString();
-    const { data } = await api.get<Appointment[]>(`/appointments${query ? `?${query}` : ''}`);
+const fetchAppointments = async (params?: AppointmentQueryParams): Promise<PagedResponse<Appointment>> => {
+    const searchParams = new URLSearchParams();
+    if (params?.filters?.doctorId) searchParams.append('doctorId', params.filters.doctorId.toString());
+    if (params?.filters?.from) searchParams.append('from', params.filters.from);
+    if (params?.filters?.to) searchParams.append('to', params.filters.to);
+    if (params?.filters?.status) searchParams.append('status', params.filters.status);
+    if (params?.page !== undefined) searchParams.append('page', params.page.toString());
+    if (params?.size !== undefined) searchParams.append('size', params.size.toString());
+
+    const query = searchParams.toString();
+    const { data } = await api.get<PagedResponse<Appointment>>(`/appointments${query ? `?${query}` : ''}`);
     return data;
 };
 
@@ -86,10 +95,10 @@ const deleteAppointment = async (id: number): Promise<void> => {
     await api.delete(`/appointments/${id}`);
 };
 
-export const useAppointments = (filters?: AppointmentFilters) => {
+export const useAppointments = (params?: AppointmentQueryParams) => {
     return useQuery({
-        queryKey: ['appointments', filters],
-        queryFn: () => fetchAppointments(filters),
+        queryKey: ['appointments', params],
+        queryFn: () => fetchAppointments(params),
     });
 };
 

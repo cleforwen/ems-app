@@ -20,6 +20,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.jboss.logging.Logger;
 
 import java.time.LocalDate;
 import java.util.Collections;
@@ -41,10 +42,13 @@ public class DashboardService {
     UserRepository userRepository;
     @Inject
     JsonWebToken jwt;
+    @Inject
+    Logger log;
 
     public DashboardResponse getDashboard() {
         Long hospitalId = getHospitalId();
         LocalDate today = LocalDate.now();
+        log.debugf("Fetching dashboard for hospital %d", hospitalId);
 
         // Total patients
         long totalPatients = patientRepository.count("hospital.id = ?1 and active = true", hospitalId);

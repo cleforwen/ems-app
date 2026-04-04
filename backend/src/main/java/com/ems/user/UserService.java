@@ -1,5 +1,6 @@
 package com.ems.user;
 
+import com.ems.common.dto.PagedResponse;
 import com.ems.hospital.Hospital;
 import com.ems.hospital.HospitalRepository;
 import com.ems.user.dto.CreateUserRequest;
@@ -12,6 +13,7 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.jboss.logging.Logger;
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.util.List;
@@ -26,15 +28,41 @@ public class UserService {
     HospitalRepository hospitalRepository;
     @Inject
     JsonWebToken jwt;
+    @Inject
+    Logger log;
 
     public List<UserResponse> list() {
-        return userRepository.list("hospital.id", getHospitalId()).stream()
+        List<UserResponse> users = userRepository.list("hospital.id", getHospitalId()).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+        log.debugf("Listed %d users for hospital %d", Integer.valueOf(users.size()), getHospitalId());
+        return users;
+    }
+
+    public PagedResponse<UserResponse> listPaginated(int page, int size, String search) {
+        Long hospitalId = getHospitalId();
+        List<User> users;
+        long total;
+
+        if (search != null && !search.trim().isEmpty()) {
+            users = userRepository.searchByHospitalId(hospitalId, search.trim(), page, size);
+            total = userRepository.countSearchByHospitalId(hospitalId, search.trim());
+        } else {
+            users = userRepository.findByHospitalIdPaginated(hospitalId, page, size);
+            total = userRepository.countByHospitalId(hospitalId);
+        }
+
+        List<UserResponse> data = users.stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+
+        log.debug("Listed " + data.size() + " users for hospital " + hospitalId + " (total: " + total + ")");
+        return PagedResponse.of(data, total, page, size);
     }
 
     public UserResponse findById(Long id) {
         User user = findUserScoped(id);
+        log.debugf("Finding user by ID: %d", id);
         return toResponse(user);
     }
 
@@ -43,11 +71,13 @@ public class UserService {
         Long hospitalId = getHospitalId();
 
         if (userRepository.find("email", request.email()).count() > 0) {
+            log.warnf("User creation failed - email already exists: %s", request.email());
             throw new WebApplicationException("Email already exists", Response.Status.CONFLICT);
         }
 
         Hospital hospital = hospitalRepository.findById(hospitalId);
         if (hospital == null) {
+            log.warnf("User creation failed - invalid hospital context: %d", hospitalId);
             throw new WebApplicationException("Hospital context invalid", Response.Status.BAD_REQUEST);
         }
 
@@ -61,6 +91,7 @@ public class UserService {
         user.setCreatedBy(jwt.getName());
 
         userRepository.persist(user);
+        log.infof("Created user: %s %s with roles %s", request.firstName(), request.lastName(), request.roles());
         return toResponse(user);
     }
 
@@ -92,9 +123,11 @@ public class UserService {
     private User findUserScoped(Long id) {
         User user = userRepository.findById(id);
         if (user == null) {
+            log.warnf("User not found: %d", id);
             throw new WebApplicationException("User not found", Response.Status.NOT_FOUND);
         }
         if (!user.getHospital().getId().equals(getHospitalId())) {
+            log.warnf("Access denied to user: %d", id);
             throw new WebApplicationException("Access denied", Response.Status.FORBIDDEN);
         }
         return user;

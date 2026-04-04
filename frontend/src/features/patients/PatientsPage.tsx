@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePatients, Patient } from '@/hooks/usePatients';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search } from 'lucide-react';
 import { CreatePatientDialog } from './CreatePatientDialog';
 import { EditPatientDialog } from './EditPatientDialog';
+import { Pagination } from '@/components/ui/pagination';
 import {
     Table,
     TableBody,
@@ -16,7 +17,26 @@ import {
 import { format } from 'date-fns';
 
 export default function PatientsPage() {
-    const { data: patients, isLoading, isError } = usePatients();
+    const [page, setPage] = useState(0);
+    const [size, setSize] = useState(20);
+    const [search, setSearch] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setSearch(searchInput);
+            setPage(0);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchInput]);
+
+    const { data: response, isLoading, isError } = usePatients({ page, size, search });
+    const patients = response?.data;
+    const total = response?.total ?? 0;
+    const totalPages = response?.totalPages ?? 0;
+
+    const isInitialLoading = isLoading && patients === undefined;
+
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
@@ -26,7 +46,15 @@ export default function PatientsPage() {
         setIsEditOpen(true);
     };
 
-    if (isLoading) return <div>Loading...</div>;
+    const handlePageChange = (newPage: number) => {
+        setPage(newPage);
+    };
+
+    const handleSizeChange = (newSize: number) => {
+        setSize(newSize);
+        setPage(0);
+    };
+
     if (isError) return <div>Error loading patients</div>;
 
     return (
@@ -48,7 +76,12 @@ export default function PatientsPage() {
             <div className="flex items-center gap-2">
                 <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search patients..." className="pl-8" />
+                    <Input
+                        placeholder="Search patients..."
+                        className="pl-8"
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                    />
                 </div>
             </div>
 
@@ -66,9 +99,15 @@ export default function PatientsPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {patients?.length === 0 ? (
+                        {isInitialLoading ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
+                                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                                    Loading patients...
+                                </TableCell>
+                            </TableRow>
+                        ) : patients?.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                                     No patients found.
                                 </TableCell>
                             </TableRow>
@@ -96,6 +135,15 @@ export default function PatientsPage() {
                     </TableBody>
                 </Table>
             </div>
+
+            <Pagination
+                page={page}
+                size={size}
+                total={total}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                onSizeChange={handleSizeChange}
+            />
         </div>
     );
 }

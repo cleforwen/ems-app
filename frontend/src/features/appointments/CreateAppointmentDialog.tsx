@@ -36,11 +36,13 @@ interface CreateAppointmentDialogProps {
 
 export function CreateAppointmentDialog({ open, onOpenChange }: CreateAppointmentDialogProps) {
     const { mutate: createAppointment, isPending } = useCreateAppointment();
-    const { data: patients } = usePatients();
-    const { data: users } = useUsers();
+    const { data: patientsResponse } = usePatients({ size: 1000 });
+    const { data: usersResponse } = useUsers({ size: 1000 });
     const { toast } = useToast();
 
-    const doctors = users?.filter(u => u.roles.includes('DOCTOR') && u.active) || [];
+    const patients = patientsResponse?.data || [];
+    const users = usersResponse?.data || [];
+    const doctors = users.filter((u: { roles: string[]; active: boolean }) => u.roles.includes('DOCTOR') && u.active);
 
     const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateAppointmentRequest>({
         resolver: zodResolver(schema),
@@ -83,7 +85,7 @@ export function CreateAppointmentDialog({ open, onOpenChange }: CreateAppointmen
                             <Label htmlFor="patientId" className="text-right">Patient</Label>
                             <select id="patientId" className={selectClass} {...register('patientId')}>
                                 <option value="">Select patient...</option>
-                                {patients?.filter(p => p.active).map(p => (
+                                {patients.filter((p: { active: boolean }) => p.active).map((p: { id: number; lastName: string; firstName: string; mrn: string }) => (
                                     <option key={p.id} value={p.id}>
                                         {p.lastName}, {p.firstName} ({p.mrn})
                                     </option>
@@ -96,7 +98,7 @@ export function CreateAppointmentDialog({ open, onOpenChange }: CreateAppointmen
                             <Label htmlFor="doctorId" className="text-right">Doctor</Label>
                             <select id="doctorId" className={selectClass} {...register('doctorId')}>
                                 <option value="">Select doctor...</option>
-                                {doctors.map(d => (
+                                {doctors.map((d: { id: number; firstName: string; lastName: string }) => (
                                     <option key={d.id} value={d.id}>
                                         Dr. {d.lastName}, {d.firstName}
                                     </option>

@@ -3,6 +3,7 @@ import { useAppointments, Appointment, AppointmentStatus, useUpdateAppointmentSt
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Pagination } from '@/components/ui/pagination';
 import {
     Table,
     TableBody,
@@ -69,26 +70,34 @@ export default function AppointmentsPage() {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [statusFilter, setStatusFilter] = useState<string>('');
+    const [page, setPage] = useState(0);
+    const [size, setSize] = useState(20);
 
-    const { data: appointments, isLoading, isError } = useAppointments();
+    const filters = useMemo(() => ({
+        status: statusFilter || undefined,
+        from: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined,
+        to: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined,
+    }), [statusFilter, selectedDate]);
+
+    const { data: response, isLoading, isError } = useAppointments({ filters, page, size });
+    const appointments = response?.data;
+    const total = response?.total ?? 0;
+    const totalPages = response?.totalPages ?? 0;
+
+    const isInitialLoading = isLoading && appointments === undefined;
+
     const { mutate: updateStatus } = useUpdateAppointmentStatus();
     const { mutate: deleteAppointment } = useDeleteAppointment();
     const { toast } = useToast();
 
     const filteredAppointments = useMemo(() => {
-        let list = appointments || [];
-        if (statusFilter) {
-            list = list.filter(a => a.status === statusFilter);
-        }
-        if (selectedDate) {
-            list = list.filter(a => isSameDay(new Date(a.appointmentDate), selectedDate));
-        }
-        return list.sort((a, b) => {
+        if (!appointments) return [];
+        return [...appointments].sort((a, b) => {
             const dateCompare = a.appointmentDate.localeCompare(b.appointmentDate);
             if (dateCompare !== 0) return dateCompare;
             return a.startTime.localeCompare(b.startTime);
         });
-    }, [appointments, statusFilter, selectedDate]);
+    }, [appointments]);
 
     // Calendar logic
     const monthStart = startOfMonth(currentMonth);
@@ -99,13 +108,13 @@ export default function AppointmentsPage() {
 
     const appointmentsByDate = useMemo(() => {
         const map = new Map<string, Appointment[]>();
-        (appointments || []).forEach(a => {
+        (response?.data || []).forEach(a => {
             const key = a.appointmentDate;
             if (!map.has(key)) map.set(key, []);
             map.get(key)!.push(a);
         });
         return map;
-    }, [appointments]);
+    }, [response?.data]);
 
     const handleStatusAdvance = (appointment: Appointment) => {
         const next = NEXT_STATUSES[appointment.status];
@@ -133,7 +142,6 @@ export default function AppointmentsPage() {
 
     const selectClass = "flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2";
 
-    if (isLoading) return <div className="p-6">Loading appointments...</div>;
     if (isError) return <div className="p-6 text-red-500">Error loading appointments</div>;
 
     return (
@@ -261,7 +269,13 @@ export default function AppointmentsPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredAppointments.length === 0 ? (
+                        {isInitialLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={8} className="text-center h-24 text-muted-foreground">
+                                    Loading appointments...
+                                </TableCell>
+                            </TableRow>
+                        ) : filteredAppointments.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={8} className="text-center h-24 text-muted-foreground">
                                     No appointments found.
@@ -316,6 +330,17 @@ export default function AppointmentsPage() {
                     </TableBody>
                 </Table>
             </div>
+
+            {view === 'list' && (
+                <Pagination
+                    page={page}
+                    size={size}
+                    total={total}
+                    totalPages={totalPages}
+                    onPageChange={setPage}
+                    onSizeChange={(newSize) => { setSize(newSize); setPage(0); }}
+                />
+            )}
         </div>
     );
 }
