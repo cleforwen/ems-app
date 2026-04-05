@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  mailhog:
+    image: mailhog/mailhog
+    container_name: ems-mailhog
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+    restart: unless-stopped
+    networks:
+      - ems-network
+
+networks:
+  ems-network:
+    name: ems-network
+    external: true
