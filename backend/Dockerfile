@@ -10,7 +10,7 @@ FROM gradle:jdk21-jammy AS build
 WORKDIR /home/gradle/src
 
 # Copy backend files
-COPY --chown=gradle:gradle ./backend /home/gradle/src/backend
+COPY --chown=gradle:gradle . /home/gradle/src/backend
 
 WORKDIR /home/gradle/src/backend
 
